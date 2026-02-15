@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
+import 'package:get/get_navigation/src/routes/get_route.dart';
+import 'package:smart_chef/screens/blog/blog_feed_screen.dart';
+import 'package:smart_chef/screens/dashboard_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:smart_chef/screens/login/login_screen.dart';
 
@@ -28,7 +31,21 @@ class SmartChefApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSwatch()
             .copyWith(secondary: const Color(0xFFFF9800)),
       ),
-      home: const LoginScreen(),
+      // 1. Define the initial route (where the app starts)
+      initialRoute: '/login',
+
+      // 2. Map the names to the actual Screen widgets
+      getPages: [
+        GetPage(
+          name: '/login',
+          page: () => const LoginScreen(),
+        ),
+        // Make sure to add your Main/Home screen here too!
+        GetPage(
+          name: '/home',
+           page: () => const DashboardScreen(),
+         ),
+      ],
     );
   }
 }

@@ -20,28 +20,38 @@ class PostModel {
   });
 
   factory PostModel.fromMap(Map<String, dynamic> map, {String? currentUserId}) {
-    final userData = map['profiles'] ?? map['profiles!posts_user_id_fkey'];
+    // 1. Handle deep nesting
+    // Sometimes Supabase returns { "posts": { ... } } instead of the post directly
+    final postData = map.containsKey('posts') ? map['posts'] : map;
 
-    // 1. Get the list of likes from the map
-    final likesList = map['likes'] as List<dynamic>? ?? [];
+    // 2. Identify the User/Profile data
+    // Check for 'profiles' (singular join) or the specific fkey join name
+    final userData = postData['profiles'] ?? postData['profiles!posts_user_id_fkey'];
 
-    // 2. Check if the current user's ID exists in the likes list
-    // This assumes your Supabase join for 'likes' returns the user_id
+    // 3. Robust ID extraction
+    final String authorId = postData['user_id']?.toString() ?? userData?['id']?.toString() ?? '';
+
+    // 4. Like Logic
+    final likesList = postData['likes'] as List<dynamic>? ?? [];
     bool likedByMe = false;
-    if (currentUserId != null) {
-      likedByMe = likesList.any((like) => like['user_id'] == currentUserId);
+
+    if (currentUserId != null && currentUserId.isNotEmpty) {
+      likedByMe = likesList.any((like) =>
+      like['user_id']?.toString() == currentUserId.toString());
     }
 
     return PostModel(
-      id: map['id']?.toString() ?? '',
-      title: map['title'] ?? 'No Title',
-      content: map['content'] ?? '',
-      imageUrl: map['image_url'],
+      id: postData['id']?.toString() ?? '',
+      title: postData['title'] ?? 'No Title',
+      content: postData['content'] ?? '',
+      imageUrl: postData['image_url'],
       likeCount: likesList.length,
-      isLiked: likedByMe, // Correctly set based on database data
-      user: userData != null
-          ? UserModel.fromMap(userData as Map<String, dynamic>)
-          : UserModel(id: '', username: 'Unknown User', avatarUrl: null),
+      isLiked: likedByMe,
+      user: UserModel(
+        id: authorId,
+        username: userData?['username'] ?? 'Unknown User',
+        avatarUrl: userData?['avatar_url'],
+      ),
     );
   }
 }

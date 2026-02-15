@@ -129,6 +129,25 @@ class SupabaseService {
     });
   }
 
+  //Update Post
+  Future<void> updatePost({
+    required String postId,
+    required String title,
+    required String content,
+  }) async {
+    final user = _client.auth.currentUser;
+    if (user == null) throw 'User not logged in';
+
+    await _client
+        .from('posts')
+        .update({
+      'title': title,
+      'content': content,
+    })
+        .eq('id', postId)
+        .eq('user_id', user.id); // Security: ensure user owns the post
+  }
+
   // --------------------------
   // Fetch posts
   // --------------------------
@@ -247,12 +266,27 @@ class SupabaseService {
   }
 
   Future<List<dynamic>> fetchLikedPosts() async {
-    final user = currentUser;
+    final user = _client.auth.currentUser;
     if (user == null) return [];
 
-    return await _client
+    // We select from 'likes', then reach into 'posts',
+    // then reach into 'profiles' (the owner) and 'likes' (the count)
+    final response = await _client
         .from('likes')
-        .select('posts(*)')
+        .select('''
+        posts (
+          id,
+          title,
+          content,
+          image_url,
+          user_id,
+          created_at,
+          profiles:user_id (id, username, avatar_url),
+          likes (user_id)
+        )
+      ''')
         .eq('user_id', user.id);
+
+    return response as List<dynamic>;
   }
 }

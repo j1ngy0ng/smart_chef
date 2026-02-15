@@ -1,70 +1,85 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/supabase_service.dart';
-import '../models/post_model.dart'; // Ensure you import your model
+import '../models/post_model.dart';
+import 'post_controller.dart'; // Ensure this is imported
 
 class ProfileController extends GetxController {
   final SupabaseService _service = SupabaseService();
-
+  final ImagePicker _picker = ImagePicker();
   final nameController = TextEditingController();
 
-  // Observable profile data
   var username = "Guest".obs;
   var avatarUrl = "".obs;
   var userId = "".obs;
-
-  // Observable lists
   var likedPosts = <PostModel>[].obs;
   var isLoading = false.obs;
 
   @override
   void onInit() {
     super.onInit();
-    loadProfile();
-    fetchLikedPosts();
+    initialLoad();
   }
 
-  // Helper to get current user ID quickly
   String get currentUid => _service.currentUser?.id ?? "";
+
+  // Helper to load everything at once
+  Future<void> initialLoad() async {
+    await loadProfile();
+    await fetchLikedPosts();
+  }
 
   Future<void> loadProfile() async {
     try {
+      isLoading.value = true;
       final data = await _service.getProfile();
       if (data != null) {
-        userId.value = data['id'] ?? "";
+        userId.value = data['id']?.toString() ?? "";
         username.value = data['username'] ?? "Unknown";
-        avatarUrl.value = data['avatar_url'] ?? "";
+
+        // Add timestamp to avatar URL to bypass Flutter's image cache
+        if (data['avatar_url'] != null && data['avatar_url'].isNotEmpty) {
+          avatarUrl.value = "${data['avatar_url']}?t=${DateTime.now().millisecondsSinceEpoch}";
+        } else {
+          avatarUrl.value = "";
+        }
 
         nameController.text = username.value;
       }
     } catch (e) {
-      print("Error loading profile: $e");
+      debugPrint("Error loading profile: $e");
+    } finally {
+      isLoading.value = false;
     }
   }
 
   Future<void> updateProfile() async {
-    if (nameController.text.isEmpty) {
-      Get.snackbar(
-          "Error", "Name cannot be empty", snackPosition: SnackPosition.BOTTOM);
+    String newName = nameController.text.trim();
+    if (newName.isEmpty) {
+      Get.snackbar("Error", "Name cannot be empty", backgroundColor: Colors.redAccent, colorText: Colors.white);
       return;
     }
 
     try {
       isLoading.value = true;
-      await _service.updateProfile(
-        username: nameController.text.trim(),
-      );
+      await _service.updateProfile(username: newName);
 
-      // Locally update observables so UI changes immediately
-      username.value = nameController.text.trim();
+      // 1. Update local UI immediately
+      username.value = newName;
 
-      Get.snackbar(
-          "Success", "Profile updated", snackPosition: SnackPosition.BOTTOM);
+      // 2. Refresh PostController so "My Recipes" shows the new name
+      try {
+        final postController = Get.find<PostController>();
+        await postController.fetchPosts();
+      } catch (e) {
+        debugPrint("PostController not initialized yet");
+      }
+
+      Get.snackbar("Success", "Profile updated", backgroundColor: const Color(0xFF00A676), colorText: Colors.white);
     } catch (e) {
-      Get.snackbar("Error", e.toString());
+      Get.snackbar("Error", "Update failed: $e");
     } finally {
       isLoading.value = false;
     }
@@ -72,17 +87,50 @@ class ProfileController extends GetxController {
 
   Future<void> fetchLikedPosts() async {
     try {
-      isLoading.value = true;
+      // Don't trigger main isLoading here to avoid full screen shimmers on every like
       final List<dynamic> data = await _service.fetchLikedPosts();
-
-      // We map the nested 'posts' data from Supabase into PostModel objects
       likedPosts.value = data.map((item) {
-        // fetchLikedPosts usually returns {'posts': {...}}
-        // We pass the currentUid to handle the 'isLiked' state correctly in the model
-        return PostModel.fromMap(item['posts'], currentUserId: currentUid);
+        return PostModel.fromMap(
+            item['posts'] as Map<String, dynamic>,
+            currentUserId: currentUid
+        );
       }).toList();
     } catch (e) {
-      print("Error fetching liked posts: $e");
+      debugPrint("Error fetching liked posts: $e");
+    }
+  }
+
+  Future<void> updateAvatar() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+      if (image == null) return;
+
+      isLoading.value = true;
+
+      // 1. Update Supabase
+      await _service.updateProfile(
+        username: username.value,
+        avatarFile: File(image.path),
+      );
+
+      // 2. Refresh local profile (Me Screen header)
+      await loadProfile();
+
+      // 3. THE FIX: Refresh the Liked Posts list
+      // This updates the avatars in your "Liked" tab
+      await fetchLikedPosts();
+
+      // 4. Refresh the Main Feed list
+      // This updates the avatars in the main home screen
+      try {
+        await Get.find<PostController>().fetchPosts();
+      } catch (e) {
+        debugPrint("PostController not yet loaded");
+      }
+
+      Get.snackbar("Success", "Updated everywhere!");
+    } catch (e) {
+      Get.snackbar("Error", "Failed: $e");
     } finally {
       isLoading.value = false;
     }
@@ -91,57 +139,22 @@ class ProfileController extends GetxController {
   Future<void> logout() async {
     try {
       await _service.signOut();
-      // This clears all screens and takes the user back to Login
-      // Replace '/login' with whatever your login route name is
+      // Clear data before leaving
+      userId.value = "";
+      username.value = "Guest";
+      avatarUrl.value = "";
+      likedPosts.clear();
+
+      // IMPORTANT: Navigates to the route defined in main.dart
       Get.offAllNamed('/login');
     } catch (e) {
-      Get.snackbar("Error", "Logout failed: $e",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white
-      );
+      Get.snackbar("Error", "Logout failed: $e");
     }
   }
 
-  final ImagePicker _picker = ImagePicker();
-
-  Future<void> updateAvatar() async {
-    try {
-      // 1. Pick the image
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 50, // Compress to save storage space
-      );
-
-      if (image == null) return;
-
-      isLoading.value = true;
-      File imageFile = File(image.path);
-
-      // 2. Upload to Supabase
-      // Note: We use the updateProfile method you already have in SupabaseService
-      await _service.updateProfile(
-        username: username.value,
-        avatarFile: imageFile,
-      );
-
-      // 3. Refresh local data
-      await loadProfile();
-      Get.snackbar("Success", "Avatar updated!",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFF00A676),
-          colorText: Colors.white
-      );
-    } catch (e) {
-      Get.snackbar("Error", e.toString());
-    } finally {
-      isLoading.value = false;
-    }
-
-    @override
-    void onClose() {
-      nameController.dispose();
-      super.onClose();
-    }
+  @override
+  void onClose() {
+    nameController.dispose();
+    super.onClose();
   }
 }

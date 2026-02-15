@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Required for HapticFeedback
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 import '/controllers/profile_controller.dart';
 import '/controllers/post_controller.dart';
 import '/screens/blog/post_detail_screen.dart';
@@ -13,6 +14,7 @@ class MeScreen extends StatefulWidget {
 }
 
 class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin {
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
   final ProfileController profileController = Get.put(ProfileController());
   final PostController postController = Get.find<PostController>();
   late TabController _tabController;
@@ -23,8 +25,28 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    profileController.loadProfile();
-    profileController.fetchLikedPosts();
+
+    // Use a sequence to ensure IDs are loaded before posts are filtered
+    profileController.loadProfile().then((_) {
+      postController.fetchPosts();
+      profileController.fetchLikedPosts();
+    });
+  }
+
+  Future<void> _refreshData() async {
+    try {
+      // 1. Trigger haptic feedback for a premium feel
+      HapticFeedback.mediumImpact();
+
+      // 2. Run all fetch commands in parallel to save time
+      await Future.wait([
+        profileController.loadProfile(),
+        postController.fetchPosts(),
+        profileController.fetchLikedPosts(),
+      ]);
+    } catch (e) {
+      debugPrint("Refresh Error: $e");
+    }
   }
 
   @override
@@ -32,66 +54,58 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          "My Kitchen", // Personalized title
-          style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.black),
-            onPressed: () {
-              HapticFeedback.lightImpact(); // Subtle vibration
-              _showSettingsSheet();
-            },
-          )
-        ],
-      ),
-      body: Obx(() => Stack(
-        children: [
-          NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                SliverToBoxAdapter(
-                  child: _buildProfileHeader(),
-                ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _SliverAppBarDelegate(
-                    TabBar(
-                      controller: _tabController,
-                      labelColor: primaryGreen,
-                      unselectedLabelColor: Colors.grey[400],
-                      indicatorColor: primaryGreen,
-                      indicatorWeight: 3,
-                      indicatorSize: TabBarIndicatorSize.label,
-                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      tabs: const [
-                        Tab(text: "My Recipes"),
-                        Tab(text: "Liked"),
-                      ],
-                    ),
-                  ),
-                ),
-              ];
-            },
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildPostGrid(isLiked: false),
-                _buildPostGrid(isLiked: true),
-              ],
-            ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          title: const Text(
+            "My Kitchen",
+            style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          // Global Loading Overlay
-          if (profileController.isLoading.value)
-            Container(
-              color: Colors.white.withOpacity(0.5),
-              child: Center(child: CircularProgressIndicator(color: primaryGreen)),
+          actions: [
+      IconButton(
+      // Use a bold icon color to ensure it's not blending in
+      icon: const Icon(Icons.settings_outlined, color: Color(0xFF00A676)),
+      onPressed: () {
+        HapticFeedback.lightImpact();
+        _showSettingsSheet();
+      },
+    )]
+    ),
+      body: Obx(() => NestedScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverToBoxAdapter(child: _buildProfileHeader()),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SliverAppBarDelegate(
+                TabBar(
+                  controller: _tabController,
+                  labelColor: primaryGreen,
+                  unselectedLabelColor: Colors.grey[400],
+                  indicatorColor: primaryGreen,
+                  tabs: const [
+                    Tab(text: "My Recipes"),
+                    Tab(text: "Liked"),
+                  ],
+                ),
+              ),
             ),
-        ],
+          ];
+        },
+        // MOVE REFRESH INDICATOR HERE
+        body: RefreshIndicator(
+          key: _refreshIndicatorKey,
+          color: primaryGreen,
+          onRefresh: _refreshData,
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildScrollableTab(isLiked: false),
+              _buildScrollableTab(isLiked: true),
+            ],
+          ),
+        ),
       )),
     );
   }
@@ -101,7 +115,6 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Column(
         children: [
-          // Avatar with Camera Overlay
           GestureDetector(
             onTap: () {
               HapticFeedback.mediumImpact();
@@ -110,22 +123,15 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
             child: Stack(
               alignment: Alignment.bottomRight,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: primaryGreen.withOpacity(0.2), width: 2),
-                  ),
-                  child: CircleAvatar(
-                    radius: 45,
-                    backgroundColor: Colors.grey[100],
-                    backgroundImage: profileController.avatarUrl.value.isNotEmpty
-                        ? NetworkImage(profileController.avatarUrl.value)
-                        : null,
-                    child: profileController.avatarUrl.value.isEmpty
-                        ? Icon(Icons.person, size: 40, color: Colors.grey[400])
-                        : null,
-                  ),
+                CircleAvatar(
+                  radius: 45,
+                  backgroundColor: Colors.grey[100],
+                  backgroundImage: profileController.avatarUrl.value.isNotEmpty
+                      ? NetworkImage(profileController.avatarUrl.value)
+                      : null,
+                  child: profileController.avatarUrl.value.isEmpty
+                      ? Icon(Icons.person, size: 40, color: Colors.grey[400])
+                      : null,
                 ),
                 CircleAvatar(
                   radius: 14,
@@ -140,18 +146,13 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
             profileController.username.value,
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 4),
-          Text(
-            "ID: ${profileController.userId.value.length > 8 ? profileController.userId.value.substring(0, 8) : profileController.userId.value}",
-            style: TextStyle(color: Colors.grey[500], fontSize: 13, letterSpacing: 0.5),
-          ),
           const SizedBox(height: 24),
-          // Clean Stat Container
           Row(
             children: [
-              Expanded(child: _buildStatItem("Recipes", postController.posts.where((p) => p.user.id == profileController.userId.value).length.toString())),
-              Container(height: 30, width: 1, color: Colors.grey[200]), // Divider
-              Expanded(child: _buildStatItem("Collection", profileController.likedPosts.length.toString())),
+              // Use the new getter from PostController
+              Expanded(child: _buildStatItem("Recipes", postController.myPosts.length.toString())),
+              Container(height: 30, width: 1, color: Colors.grey[200]),
+              Expanded(child: _buildStatItem("Liked", profileController.likedPosts.length.toString())),
             ],
           ),
         ],
@@ -169,32 +170,36 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildPostGrid({required bool isLiked}) {
-    final posts = isLiked
-        ? profileController.likedPosts
-        : postController.posts.where((p) => p.user.id == profileController.userId.value).toList();
+  Widget _buildScrollableTab({required bool isLiked}) {
+    final posts = isLiked ? profileController.likedPosts : postController.myPosts;
+    final bool loading = isLiked ? profileController.isLoading.value : postController.isLoading.value;
 
+    if (loading) return _buildShimmerGrid();
+
+    // If empty, we MUST use a scrollable view or pull-to-refresh fails
     if (posts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.restaurant_menu_outlined, size: 48, color: Colors.grey[200]),
-            const SizedBox(height: 12),
-            Text(isLiked ? "No favorites yet" : "Start sharing recipes!",
-                style: TextStyle(color: Colors.grey[400], fontSize: 14)),
-          ],
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: 400, // Enough height to allow a "pull"
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.restaurant_menu, size: 48, color: Colors.grey[200]),
+              Text("Nothing here yet", style: TextStyle(color: Colors.grey[400])),
+            ],
+          ),
         ),
       );
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(12), // Add padding for a "card" feel
+      padding: const EdgeInsets.all(12),
+      // CRITICAL: This allows the scroll to bubble up to the RefreshIndicator
+      physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, // 2 items per row looks better for recipes
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.9,
+        crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.9,
       ),
       itemCount: posts.length,
       itemBuilder: (context, index) {
@@ -202,10 +207,7 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
         return GestureDetector(
           onTap: () => Get.to(() => PostDetailScreen(post: post)),
           child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.grey[100],
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: Colors.grey[100]),
             clipBehavior: Clip.antiAlias,
             child: Image.network(post.imageUrl ?? '', fit: BoxFit.cover),
           ),
@@ -216,64 +218,122 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
 
   void _showSettingsSheet() {
     Get.bottomSheet(
+      // Container provides the white background and rounded corners
       Container(
-        padding: const EdgeInsets.only(top: 8, bottom: 24),
-        color: const Color(0xFF00A676),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle, // ✅ Correct: shape goes inside BoxDecoration
-          color: Colors.green,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 20), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-            ListTile(
-              leading: Icon(Icons.person_outline, color: primaryGreen),
-              title: const Text("Edit Profile Name", style: TextStyle(fontWeight: FontWeight.w500)),
-              onTap: () { Get.back(); _showEditNameDialog(); },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-              title: const Text("Logout", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500)),
-              onTap: () => profileController.logout(),
-            ),
-          ],
+        // SafeArea ensures it doesn't get cut off by the "home bar" on iPhones
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Takes up only needed space
+            children: [
+              // The "Grabber" handle at the top
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const Text(
+                "Settings",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: Icon(Icons.person_outline, color: primaryGreen),
+                title: const Text("Edit Profile Name"),
+                onTap: () {
+                  Get.back();
+                  _showEditNameDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                title: const Text("Logout", style: TextStyle(color: Colors.redAccent)),
+                onTap: () => profileController.logout(),
+              ),
+              const SizedBox(height: 20), // Bottom padding
+            ],
+          ),
         ),
       ),
+      isScrollControlled: true, // Allows the sheet to resize properly
+      backgroundColor: Colors.transparent, // Ensures the rounded corners look right
     );
   }
 
   void _showEditNameDialog() {
+    // 1. Pre-fill the controller with the current name
+    profileController.nameController.text = profileController.username.value;
+
     Get.defaultDialog(
       title: "Change Name",
-      titlePadding: const EdgeInsets.only(top: 20),
-      contentPadding: const EdgeInsets.all(24),
-      content: TextField(
-        controller: profileController.nameController,
-        autofocus: true,
-        decoration: InputDecoration(
-          hintText: "What should we call you?",
-          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey[200]!)),
-          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryGreen)),
+      titleStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      content: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        child: TextField(
+          controller: profileController.nameController,
+          decoration: InputDecoration(
+            hintText: "Enter username",
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryGreen)),
+          ),
         ),
       ),
-      textConfirm: "Save Changes",
+      textConfirm: "Save",
       confirmTextColor: Colors.white,
       buttonColor: primaryGreen,
       onConfirm: () async {
         await profileController.updateProfile();
-        Get.back();
+        Get.back(); // Closes dialog
       },
     );
   }
 }
 
+Widget _buildShimmerGrid() {
+  return Shimmer.fromColors(
+    baseColor: Colors.grey[200]!,
+    highlightColor: Colors.grey[50]!,
+    child: GridView.builder(
+      padding: const EdgeInsets.all(12),
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.9,
+      ),
+      itemCount: 6, // Show 6 skeleton boxes
+      itemBuilder: (_, __) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    ),
+  );
+}
+
+// Delegate for the Sticky TabBar
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverAppBarDelegate(this._tabBar);
   final TabBar _tabBar;
+
   @override double get minExtent => _tabBar.preferredSize.height;
   @override double get maxExtent => _tabBar.preferredSize.height;
-  @override Widget build(context, offset, overlaps) => Container(color: Colors.white, child: _tabBar);
-  @override bool shouldRebuild(_SliverAppBarDelegate old) => false;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.white, // This ensures the tabs aren't transparent
+      child: _tabBar,
+    );
+  }
+
+  @override bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
 }

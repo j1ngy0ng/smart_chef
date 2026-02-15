@@ -4,6 +4,7 @@ import '../../controllers/post_controller.dart';
 import '/controllers/comment_controller.dart';
 import '/models/post_model.dart';
 import '/services/supabase_service.dart';
+import 'create_post_screen.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final PostModel post;
@@ -72,11 +73,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        // This ensures the status bar icons (clock/battery) stay visible on top of images
+        iconTheme: const IconThemeData(color: Colors.white),
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: CircleAvatar(
@@ -87,7 +88,47 @@ class _PostDetailScreenState extends State<PostDetailScreen> with SingleTickerPr
             ),
           ),
         ),
+        actions: [
+          // --- DEBUG TIP: Print IDs to console to see if they actually match ---
+          // print("Post User: ${widget.post.user.id} | Current User: ${_supabaseService.currentUser?.id}");
+
+          if (widget.post.user.id == _supabaseService.currentUser?.id)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CircleAvatar(
+                backgroundColor: Colors.black.withOpacity(0.4),
+                child: PopupMenuButton<String>(
+                  // Use a specific icon color to ensure it pierces the background
+                  icon: const Icon(Icons.more_vert, color: Colors.white, size: 22),
+                  padding: EdgeInsets.zero,
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _handleEditPost();
+                    } else if (value == 'delete') {
+                      _confirmDeletePost();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [Icon(Icons.edit_outlined, color: Colors.black, size: 20), SizedBox(width: 8), Text("Edit Post")],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [Icon(Icons.delete_outline, color: Colors.red, size: 20), SizedBox(width: 8), Text("Delete", style: TextStyle(color: Colors.red))],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
+      backgroundColor: Colors.white,
+      extendBodyBehindAppBar: true,
       body: Column(
         children: [
           Expanded(
@@ -281,4 +322,32 @@ class _PostDetailScreenState extends State<PostDetailScreen> with SingleTickerPr
       },
     );
   }
+
+  void _confirmDeletePost() {
+    Get.defaultDialog(
+      title: "Delete Post",
+      middleText: "Are you sure you want to delete this recipe? This cannot be undone.",
+      textConfirm: "Delete",
+      textCancel: "Cancel",
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.redAccent,
+      onConfirm: () async {
+        await _supabaseService.deletePost(widget.post.id);
+        postController.fetchPosts(); // Refresh the feed
+        Get.back(); // Close dialog
+        Get.back(); // Return to feed screen
+        Get.snackbar("Deleted", "Your recipe has been removed.");
+      },
+    );
+  }
+
+  void _handleEditPost() {
+    print("Opening Edit Screen for Post: ${widget.post.id}");
+    // Use a slight delay or ensure the context is ready
+    Get.to(() => CreatePostScreen(editPost: widget.post), transition: Transition.rightToLeft);
+  }
+
 }
+
+
+

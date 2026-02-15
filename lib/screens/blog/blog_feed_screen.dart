@@ -10,29 +10,63 @@ class BlogFeedScreen extends StatelessWidget {
   BlogFeedScreen({super.key});
 
   final PostController postController = Get.put(PostController());
+  final TextEditingController searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8), // Light grey background
+      backgroundColor: const Color(0xFFF8F8F8),
       appBar: AppBar(
-        title: const Text("Discover",
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
-        centerTitle: true,
+        title: Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: TextField(
+            controller: searchController,
+            onChanged: (value) => postController.searchQuery.value = value,
+            decoration: InputDecoration(
+              hintText: "Search recipes...",
+              hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+              prefixIcon: const Icon(Icons.search, size: 20, color: Colors.grey),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
+                onPressed: () {
+                  searchController.clear();
+                  postController.searchQuery.value = "";
+                },
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          ),
+        ),
       ),
       body: Obx(() {
         if (postController.isLoading.value) {
           return const Center(child: CircularProgressIndicator(color: Color(0xFF00A676)));
         }
 
-        final posts = postController.posts;
+        // --- USE FILTERED POSTS INSTEAD ---
+        final posts = postController.filteredPosts;
+
         if (posts.isEmpty) {
-          return const Center(child: Text("No recipes shared yet."));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.search_off, size: 64, color: Colors.grey[300]),
+                const SizedBox(height: 16),
+                Text("No results for '${postController.searchQuery.value}'",
+                    style: TextStyle(color: Colors.grey[500])),
+              ],
+            ),
+          );
         }
 
-        // --- MASONRY GRID LAYOUT ---
         return MasonryGridView.count(
           crossAxisCount: 2,
           mainAxisSpacing: 10,

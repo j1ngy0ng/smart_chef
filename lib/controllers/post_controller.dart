@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:smart_chef/controllers/profile_controller.dart';
 import '../models/post_model.dart';
 import '../services/supabase_service.dart';
 
@@ -25,6 +26,21 @@ class PostController extends GetxController {
   var posts = <PostModel>[].obs;
   var isLoading = false.obs;
 
+  //Search variable
+  var searchQuery = "".obs; // Holds the current search text
+
+  // Use a computed property (getter) to filter posts automatically
+  List<PostModel> get filteredPosts {
+    if (searchQuery.value.isEmpty) {
+      return posts;
+    }
+    return posts.where((post) {
+      final title = post.title.toLowerCase();
+      final content = post.content.toLowerCase();
+      final query = searchQuery.value.toLowerCase();
+      return title.contains(query) || content.contains(query);
+    }).toList();
+  }
   // ==========================
   // Init
   // ==========================
@@ -44,8 +60,12 @@ class PostController extends GetxController {
       final currentUid = _service.currentUser?.id; // Get the ID of the logged-in user
 
       posts.value = data.map((e) {
-        // Pass the current user ID to the factory constructor
-        return PostModel.fromMap(e as Map<String, dynamic>, currentUserId: currentUid);
+        final model = PostModel.fromMap(e as Map<String, dynamic>, currentUserId: currentUid);
+
+        // DEBUG PRINT: Compare these two in your console!
+        print("Post ID: ${model.id} | Author ID: ${model.user.id} | My ID: $currentUid");
+
+        return model;
       }).toList();
 
     } catch (e) {
@@ -58,6 +78,37 @@ class PostController extends GetxController {
   Future<List<PostModel>> getPosts() async {
     if (posts.isEmpty) await fetchPosts(showError: false);
     return posts;
+  }
+
+  List<PostModel> get myPosts {
+    final currentUid = _service.currentUser?.id;
+    if (currentUid == null) return [];
+    // We use .where to filter posts belonging to the logged-in user
+    return posts.where((p) => p.user.id == currentUid).toList();
+  }
+
+  //Update post
+  Future<void> updatePost(String postId) async {
+    try {
+      isLoading.value = true;
+
+      await _service.updatePost(
+        postId: postId,
+        title: titleController.text.trim(),
+        content: contentController.text.trim(),
+      );
+
+      // This is vital! It tells the BlogFeedScreen to show the new info
+      await fetchPosts();
+
+      // Clear inputs for the next time the user opens the screen
+      titleController.clear();
+      contentController.clear();
+    } catch (e) {
+      Get.snackbar("Error", e.toString());
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   // ==========================
@@ -162,54 +213,68 @@ class PostController extends GetxController {
   Future<void> toggleLike(String postId) async {
     if (isLoading.value) return;
 
-    // Capture current state
+    final profileController = Get.find<ProfileController>();
     bool originalLiked = isLiked.value;
     int originalCount = currentLikeCount.value;
 
     try {
+      // 1. Optimistic UI Toggle
       if (isLiked.value) {
         isLiked.value = false;
         currentLikeCount.value--;
+
+        // SYNC: Remove from profile list
+        profileController.likedPosts.removeWhere((p) => p.id == postId);
       } else {
         isLiked.value = true;
         currentLikeCount.value++;
+
+        // SYNC: Add to profile list
+        // Find the post object from our main list
+        final likedPost = posts.firstWhereOrNull((p) => p.id == postId);
+        if (likedPost != null) {
+          // Create a copy with the liked status set to true
+          final updatedLikedPost = PostModel(
+            id: likedPost.id,
+            title: likedPost.title,
+            content: likedPost.content,
+            imageUrl: likedPost.imageUrl,
+            user: likedPost.user,
+            likeCount: currentLikeCount.value,
+            isLiked: true,
+          );
+
+          // Add to the beginning of the liked list
+          profileController.likedPosts.insert(0, updatedLikedPost);
+        }
       }
 
-      // --- THE FIX: SYNC THE MAIN LIST ---
+      // 2. Update the main feed list
       int index = posts.indexWhere((p) => p.id == postId);
       if (index != -1) {
-        // Create a copy of the post with updated like data
-        final updatedPost = PostModel(
+        posts[index] = PostModel(
           id: posts[index].id,
           title: posts[index].title,
           content: posts[index].content,
           imageUrl: posts[index].imageUrl,
           user: posts[index].user,
-          likeCount: currentLikeCount.value, // Update count
-          isLiked: isLiked.value,           // Update status
+          likeCount: currentLikeCount.value,
+          isLiked: isLiked.value,
         );
-
-        posts[index] = updatedPost; // Replace the post in the observable list
-        posts.refresh(); // Tell GetX to redraw the Feed Screen
+        posts.refresh();
       }
 
-      // Call database
+      // 3. Call Database
       if (originalLiked) {
         await _service.unlikePost(postId);
       } else {
         await _service.likePost(postId);
       }
     } catch (e) {
-      // Revert UI if database fails
+      // Revert UI on failure
       isLiked.value = originalLiked;
       currentLikeCount.value = originalCount;
-
-      // Specifically handle the "Duplicate" error quietly
-      if (e.toString().contains("23505")) {
-        isLiked.value = true; // Sync UI to true since it already exists
-      } else {
-        Get.snackbar("Error", "Action failed");
-      }
+      await profileController.fetchLikedPosts(); // Refresh from DB to be sure
     }
   }
 
