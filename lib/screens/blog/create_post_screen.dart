@@ -62,18 +62,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             onPressed: () async {
               if (isEditing) {
                 await controller.updatePost(widget.editPost!.id);
-
-                // 1. Close the CreatePostScreen (Edit Mode)
-                Get.back();
-
-                // 2. Close the PostDetailScreen (which has the old data)
-                // This brings the user back to the Discovery/Feed screen
-                Get.back();
-
+                Get.back(); // Close Edit Screen
+                Get.back(); // Close Detail Screen
                 Get.snackbar("Success", "Recipe updated!");
               } else {
+                // This will now trigger Gemini review inside the controller
                 await controller.submitPost();
-                Get.back();
+                // Note: We don't call Get.back() here because submitPost
+                // handles it after a successful AI review.
               }
             },
             child: Text(
@@ -88,12 +84,26 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         ],
       ),
       body: Obx(
-        () => controller.isLoading.value
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF00A676)),
-              )
+            () => controller.isLoading.value
+            ? Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: Color(0xFF00A676)),
+              const SizedBox(height: 20),
+              // Dynamic loading text
+              Text(
+                isEditing ? "Updating recipe..." : "SmartChef AI is reviewing your recipe...",
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        )
             : SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -146,6 +156,20 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       ),
                     ),
                     const Divider(),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => controller.enhanceWithAI(),
+                          icon: const Icon(Icons.auto_awesome, size: 18, color: Color(0xFF00A676)),
+                          label: const Text(
+                              "AI Polish",
+                              style: TextStyle(color: Color(0xFF00A676), fontWeight: FontWeight.bold)
+                          ),
+                        ),
+                      ],
+                    ),
 
                     // --- CONTENT ---
                     TextField(

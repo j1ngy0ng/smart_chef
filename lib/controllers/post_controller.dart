@@ -5,9 +5,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:smart_chef/controllers/profile_controller.dart';
 import '../models/post_model.dart';
 import '../services/supabase_service.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 class PostController extends GetxController {
   final SupabaseService _service = SupabaseService();
+
+  final _model = GenerativeModel(
+    model: 'gemini-2.5-flash',
+    apiKey: 'AIzaSyB5z8_MWyKlNxItApAAZRrARylVLOZDmhc',
+  );
 
   // ==========================
   // Text Controllers
@@ -130,17 +136,52 @@ class PostController extends GetxController {
   // ==========================
   Future<void> submitPost() async {
     if (titleController.text.isEmpty || contentController.text.isEmpty) {
-      Get.snackbar(
-        "Error",
-        "Please fill all fields",
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar("Error", "Please fill all fields", snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
     try {
       isLoading.value = true;
 
+      // 1. AI Review & Enhancement Phase
+      // Using gemini-1.5-flash for speed and lower cost
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: 'AIzaSyB5z8_MWyKlNxItApAAZRrARylVLOZDmhc');
+
+      final prompt = """
+    You are the SmartChef AI Moderator. 
+    Analyze the following title and content.
+    Title: ${titleController.text}
+    Content: ${contentController.text}
+
+    Rules:
+    1. If the content is NOT about food, cooking, or recipes, respond ONLY with "REJECT".
+    2. If it IS about food, rewrite the content to be more engaging and appetizing, but keep all original steps/ingredients.
+    3. Respond in this EXACT format:
+    STATUS: [APPROVE or REJECT]
+    ENHANCED_CONTENT: [Your rewritten version here]
+    """;
+
+      final response = await model.generateContent([Content.text(prompt)]);
+      final result = response.text ?? "";
+
+      // Check if the Chef AI rejected the content
+      if (result.contains("REJECT")) {
+        Get.snackbar(
+          "Invalid Content",
+          "SmartChef only accepts food-related posts. Please share a recipe!",
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Extract the enhanced content
+      String finalContent = contentController.text.trim();
+      if (result.contains("ENHANCED_CONTENT:")) {
+        finalContent = result.split("ENHANCED_CONTENT:").last.trim();
+      }
+
+      // 2. Image Upload Phase (Only if AI approves)
       String? imageUrl;
       if (selectedImage.value != null) {
         imageUrl = await _service.uploadImage(
@@ -149,47 +190,74 @@ class PostController extends GetxController {
         );
 
         if (imageUrl == null) {
-          Get.snackbar(
-            "Error",
-            "Failed to upload image",
-            snackPosition: SnackPosition.BOTTOM,
-          );
+          Get.snackbar("Error", "Failed to upload image", snackPosition: SnackPosition.BOTTOM);
           return;
         }
       }
 
+      // 3. Database Save Phase
       await _service.createPost(
         title: titleController.text.trim(),
-        content: contentController.text.trim(),
+        content: finalContent, // We use the AI-enhanced content here!
         imageFile: selectedImage.value,
       );
 
-      // Clear inputs
+      // 4. Cleanup and Navigation
       titleController.clear();
       contentController.clear();
       selectedImage.value = null;
 
-      // Refresh feed safely after submission
       await fetchPosts();
-
-      // Navigate back first
       Get.back();
 
-      // Show success snackbar after screen pop
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Get.snackbar(
-          "Success",
-          "Post created",
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 2),
-        );
+        Get.snackbar("Success", "Recipe published with SmartChef AI!", snackPosition: SnackPosition.BOTTOM);
       });
+
     } catch (e) {
-      Get.snackbar(
-        "Error",
-        e.toString(),
-        snackPosition: SnackPosition.BOTTOM,
+      Get.snackbar("Error", "AI verification error: $e", snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> enhanceWithAI() async {
+    if (contentController.text.isEmpty) {
+      Get.snackbar("Tip", "Write something first so the AI can polish it!");
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      // Initialize Gemini
+      final model = GenerativeModel(
+          model: 'gemini-2.5-flash',
+          apiKey: 'AIzaSyB5z8_MWyKlNxItApAAZRrARylVLOZDmhc'
       );
+
+      final prompt = """
+    You are a professional food blogger and chef. 
+    Rewrite the following recipe content to be more engaging, appetizing, and well-structured for a social media app called SmartChef.
+    Keep the original ingredients and steps accurate, but use a friendly and exciting tone.
+    
+    Original Content: ${contentController.text}
+    """;
+
+      final response = await model.generateContent([Content.text(prompt)]);
+      final enhancedText = response.text;
+
+      if (enhancedText != null && enhancedText.isNotEmpty) {
+        // Update the text field with the new AI version
+        contentController.text = enhancedText.trim();
+        Get.snackbar("AI Magic", "Recipe polished by SmartChef AI!",
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFFE0F7F1),
+            colorText: const Color(0xFF00A676)
+        );
+      }
+    } catch (e) {
+      Get.snackbar("Error", "AI couldn't polish the text: $e");
     } finally {
       isLoading.value = false;
     }
