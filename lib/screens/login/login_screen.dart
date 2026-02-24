@@ -136,19 +136,26 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: Row(
+                    child:
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Note: Ensure this asset exists or use an icon
-                        Image.network(
-                          'https://toppng.com/uploads/preview/google-logo-transparent-png-11659866441wanynck5pd.png', // Or use Image.asset('assets/google_logo.png')
+                        // UPDATED: Using local asset instead of Image.network
+                        Image.asset(
+                          'assets/google_logo.png',
                           height: 24,
                           width: 24,
+                          // Optional: Handles cases where the image might be missing during dev
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.login),
                         ),
                         const SizedBox(width: 12),
                         const Text(
                           'Continue with Google',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87, // Ensures text is visible on white background
+                          ),
                         ),
                       ],
                     ),
