@@ -8,28 +8,12 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../controllers/nutrition_controller.dart';
 import '../../models/nutrition_model.dart';
+import '../../screens/health/add_meal_screen.dart';
+import '../../controllers/add_meal_controller.dart';
+import '../../models/food_item_model.dart';
+import '../../theme/colors.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DESIGN TOKENS
-// ─────────────────────────────────────────────────────────────────────────────
-class _C {
-  static const primary = Color(0xFF4CAF50);
-  static const dark = Color(0xFF2E7D32);
-  static const accent = Color(0xFFA506A7);
-  static const bg = Color(0xFFF5FAF5);
-  static const card = Colors.white;
-  static const text1 = Color(0xFF111827);
-  static const text2 = Color(0xFF6B7280);
-  static const text3 = Color(0xFFB0B8C1);
-  static const protein = Color(0xFF3B82F6);
-  static const carbs = Color(0xFFF59E0B);
-  static const fat = Color(0xFFEC4899);
-  static const water = Color(0xFF06B6D4);
-  static const steps = Color(0xFF7C3AED);
-  static const burn = Color(0xFFEF4444);
-  static const warning = Color(0xFFF59E0B);
-  static const success = Color(0xFF10B981);
-}
+typedef _C = C;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREEN
@@ -114,6 +98,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
               _buildActivityRow(),
               const SizedBox(height: 16),
               _buildInsightsSection(),
+              _buildTodayMealsSection(),
               const SizedBox(height: 96), // FAB clearance
             ]),
           ),
@@ -801,14 +786,11 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
   // ── FAB ─────────────────────────────────────────────────────────────────────
   Widget _buildFAB() {
     return FloatingActionButton.extended(
-      onPressed: () {
-        // Navigate to Add Meal screen
-        // Get.to(() => const AddMealScreen());
-        Get.snackbar('➕ Add Meal', 'Add Meal screen coming next!',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: _C.primary,
-            colorText: Colors.white);
-      },
+      onPressed: () => Get.to(
+            () => const AddMealScreen(),
+        transition: Transition.downToUp,
+        duration: const Duration(milliseconds: 350),
+      ),
       backgroundColor: _C.primary,
       elevation: 8,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -861,6 +843,234 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   fontWeight: FontWeight.w600)),
         ),
       ],
+    );
+  }
+
+  Widget _buildTodayMealsSection() {
+    return Obx(() {
+      final logs = _ctrl.todayLogs;
+      if (logs.isEmpty) return const SizedBox.shrink();
+
+      // Group by meal type
+      final grouped = <String, List<NutritionLog>>{};
+      for (final log in logs) {
+        grouped.putIfAbsent(log.mealType, () => []).add(log);
+      }
+      const order = ['breakfast', 'lunch', 'dinner', 'snack'];
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Today's Meals",
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _C.text1)),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                    color: _C.primary.withOpacity(0.09),
+                    borderRadius: BorderRadius.circular(8)),
+                child: Text('${logs.length} items',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: _C.primary,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...order
+              .where((type) => grouped.containsKey(type))
+              .map((type) => _buildMealGroup(type, grouped[type]!))
+              .toList(),
+        ],
+      );
+    });
+  }
+
+  Widget _buildMealGroup(String mealType, List<NutritionLog> logs) {
+    const emojis = {
+      'breakfast': '🌅',
+      'lunch': '☀️',
+      'dinner': '🌙',
+      'snack': '🍎',
+    };
+    final totalCal = logs.fold(0.0, (s, l) => s + l.calories);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: _C.card,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3))
+        ],
+      ),
+      child: Column(
+        children: [
+          // Group header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Row(
+              children: [
+                Text(emojis[mealType] ?? '🍴',
+                    style: const TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Text(
+                  mealType.capitalizeFirst ?? mealType,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _C.text1),
+                ),
+                const Spacer(),
+                Text(
+                  '${totalCal.toInt()} kcal',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _C.primary),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => Get.to(
+                        () => AddMealScreen(
+                        editLog: null), // opens add with meal type pre-set
+                    transition: Transition.downToUp,
+                  ),
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                        color: _C.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(7)),
+                    child: const Icon(Icons.add_rounded,
+                        color: _C.primary, size: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Food items
+          ...logs.asMap().entries.map((entry) {
+            final i = entry.key;
+            final log = entry.value;
+            final isLast = i == logs.length - 1;
+            return Column(
+              children: [
+                if (i > 0)
+                  const Divider(
+                      color: _C.divider, height: 1, indent: 14, endIndent: 14),
+                _buildLogRow(log),
+                if (isLast) const SizedBox(height: 4),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogRow(NutritionLog log) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(log.foodName,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _C.text1)),
+                const SizedBox(height: 2),
+                Text(
+                  '${log.servingSize.toInt()}g  ·  P:${log.protein.toInt()}g  C:${log.carbs.toInt()}g  F:${log.fat.toInt()}g',
+                  style: const TextStyle(fontSize: 11, color: _C.text3),
+                ),
+              ],
+            ),
+          ),
+          Text('${log.calories.toInt()} kcal',
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _C.text2)),
+          const SizedBox(width: 8),
+          // Edit
+          GestureDetector(
+            onTap: () => Get.to(
+                  () => AddMealScreen(editLog: log),
+              transition: Transition.downToUp,
+            ),
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                  color: _C.primary.withOpacity(0.09),
+                  borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.edit_rounded,
+                  color: _C.primary, size: 14),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Delete
+          GestureDetector(
+            onTap: () => _confirmDelete(log),
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.delete_outline_rounded,
+                  color: Color(0xFFEF4444), size: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(NutritionLog log) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Item?',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text('Remove "${log.foodName}" from today\'s log?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel',
+                style: TextStyle(color: _C.text2)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              _ctrl.deleteLog(log.id);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Delete',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 
