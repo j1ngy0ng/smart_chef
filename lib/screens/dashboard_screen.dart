@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '/screens/blog/blog_feed_screen.dart';
 import '/screens/profile/me_screen.dart';
+import 'package:smart_chef/screens/health/nutrition_dashboard_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,7 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     BlogFeedScreen(),
     const MeScreen(), //change this to your module - SHA
     const MeScreen(), //change this to your module - WK
-    const MeScreen(), //change this to your module - JX
+    NutritionDashboardScreen(), //change this to your module - JX
     const MeScreen(),
   ];
 

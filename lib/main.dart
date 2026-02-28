@@ -5,6 +5,7 @@ import 'package:smart_chef/screens/blog/blog_feed_screen.dart';
 import 'package:smart_chef/screens/dashboard_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:smart_chef/screens/login/login_screen.dart';
+import 'package:smart_chef/screens/health/nutrition_dashboard_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +46,10 @@ class SmartChefApp extends StatelessWidget {
           name: '/home',
            page: () => const DashboardScreen(),
          ),
+        GetPage(
+          name: '/nutrition',
+          page: () => const NutritionDashboardScreen(),
+        ),
       ],
     );
   }
