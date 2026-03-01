@@ -1,12 +1,14 @@
 class Meal {
-  final int? id; // SQLite auto-increments this
+  final int? id;
   final String title;
-  final String type; // Breakfast, Lunch, Dinner
+  final String type;
   final int kcal;
   final String imageUrl;
-  final String ingredients; // Saved as "Eggs, Milk, Flour"
-  final String steps;       // Saved as "1. Mix\n2. Cook"
-  final String date;        // Format: "2024-05-20"
+  final String ingredients;
+  final String steps;
+  final String date;
+  // NEW: Flag to identify if this is an unstructured community post
+  final bool isSocialPost;
 
   Meal({
     this.id,
@@ -17,9 +19,9 @@ class Meal {
     required this.ingredients,
     required this.steps,
     required this.date,
+    this.isSocialPost = false, // Default is false (structured)
   });
 
-  // Convert Meal object to a Map for SQL insertion
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -30,10 +32,11 @@ class Meal {
       'ingredients': ingredients,
       'steps': steps,
       'date': date,
+      // SQLite stores booleans as 1 (true) or 0 (false)
+      'isSocialPost': isSocialPost ? 1 : 0,
     };
   }
 
-  // Convert Map from SQL back into a Meal object
   factory Meal.fromMap(Map<String, dynamic> map) {
     return Meal(
       id: map['id'],
@@ -44,6 +47,8 @@ class Meal {
       ingredients: map['ingredients'],
       steps: map['steps'],
       date: map['date'],
+      // Convert the 1/0 back to a boolean
+      isSocialPost: map['isSocialPost'] == 1,
     );
   }
 }

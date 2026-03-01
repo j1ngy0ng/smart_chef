@@ -12,12 +12,11 @@ class LocalDbService {
   }
 
   Future<Database> _initDB() async {
-    // Get the location of the database file on the phone
     String path = join(await getDatabasesPath(), 'smart_chef_planner.db');
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Bumped version to add new column
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE meals(
@@ -28,20 +27,35 @@ class LocalDbService {
             imageUrl TEXT,
             ingredients TEXT,
             steps TEXT,
-            date TEXT
+            date TEXT,
+            isSocialPost INTEGER DEFAULT 0 
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Adds the column to existing tables without deleting data
+          await db.execute('ALTER TABLE meals ADD COLUMN isSocialPost INTEGER DEFAULT 0');
+        }
       },
     );
   }
 
-  // Insert a new meal into the local database
   Future<int> insertMeal(Meal meal) async {
     final db = await database;
     return await db.insert('meals', meal.toMap());
   }
 
-  // Fetch meals saved for a specific date
+  Future<int> updateMeal(Meal meal) async {
+    final db = await database;
+    return await db.update(
+      'meals',
+      meal.toMap(),
+      where: 'id = ?',
+      whereArgs: [meal.id], // This targets the specific meal we just fixed
+    );
+  }
+
   Future<List<Meal>> getMealsByDate(String dateString) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -49,7 +63,7 @@ class LocalDbService {
       where: 'date = ?',
       whereArgs: [dateString],
     );
-    return maps.map((item) => Meal.fromMap(item)).toList();
+    return List.generate(maps.length, (i) => Meal.fromMap(maps[i]));
   }
 
   Future<void> deleteMeal(int id) async {
@@ -61,4 +75,3 @@ class LocalDbService {
     );
   }
 }
-
