@@ -263,49 +263,6 @@ class SmartPlannerScreen extends GetView<PlannerController> {
     );
   }
 
-  // --- MEAL TYPE PICKER ---
-  // This addresses the "selection not yet function" issue
-  void _showMealTypePicker(BuildContext context, dynamic post, PlannerController controller) {
-    Get.defaultDialog(
-      title: "Add to Plan",
-      titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-      content: Column(
-        children: [
-          Text("Assign ${post.title} to:"),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: ['Breakfast', 'Lunch', 'Dinner'].map((type) {
-              return ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00A676),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () {
-                  controller.addFromPost(post, type); // Pass the type to controller
-                  Get.back(); // Close Dialog
-                  Get.back(); // Close Bottom Sheet
-                },
-                child: Text(type, style: const TextStyle(color: Colors.white)),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuOption({required String title, required String subtitle, required IconData icon, required Color color, required VoidCallback onTap}) {
-    return ListTile(
-      onTap: onTap,
-      leading: CircleAvatar(backgroundColor: color, child: Icon(icon, color: Colors.white, size: 20)),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
-      shape: RoundedRectangleBorder(side: BorderSide(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(15)),
-    );
-  }
-
   // --- SMART SETUP SHEET ---
 
   void _showSmartSetupSheet(BuildContext context, PlannerController controller) {
@@ -402,7 +359,12 @@ class SmartPlannerScreen extends GetView<PlannerController> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2)],
+          boxShadow: [
+            BoxShadow(
+                color: Colors.grey.withValues(alpha: 0.1),
+                blurRadius: 10,
+                spreadRadius: 2)
+          ],
           border: Border.all(color: Colors.grey.shade200),
         ),
         child: Column(
@@ -413,9 +375,46 @@ class SmartPlannerScreen extends GetView<PlannerController> {
               child: Hero(
                 tag: 'meal-${meal.id}',
                 child: Image.network(
-                  meal.imageUrl, height: 180, width: double.infinity, fit: BoxFit.cover,
+                  meal.imageUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  // --- FIX: Beautiful Full-Size Placeholder ---
                   errorBuilder: (context, error, stackTrace) => Container(
-                    height: 180, color: Colors.grey[200], child: const Icon(Icons.broken_image),
+                    height: 180, // Forces the box to be the same height as a photo
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF00A676).withValues(alpha: 0.1),
+                          Colors.white,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.restaurant_menu_rounded,
+                            size: 45,
+                            color: const Color(0xFF00A676).withValues(alpha: 0.3),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "PHOTO COMING SOON",
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                              color: const Color(0xFF00A676).withValues(alpha: 0.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -428,12 +427,20 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(meal.type.toUpperCase(), style: const TextStyle(color: Color(0xFF00A676), fontWeight: FontWeight.bold, fontSize: 12)),
-                      Text("${meal.kcal} kcal", style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                      Text(meal.type.toUpperCase(),
+                          style: const TextStyle(
+                              color: Color(0xFF00A676),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12)),
+                      Text("${meal.kcal} kcal",
+                          style: const TextStyle(
+                              color: Colors.grey, fontWeight: FontWeight.w600)),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(meal.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text(meal.title,
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart'; // Import Get
+import 'package:get/get.dart';
 import '../../models/meal_model.dart';
-import '../../controllers/planner_controller.dart'; // Import Controller
+import '../../controllers/planner_controller.dart';
 
 class MealDetailScreen extends StatelessWidget {
   final Meal meal;
@@ -14,13 +14,12 @@ class MealDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Obx(() {
-        // Find the latest version of the meal in the controller
+        // Find the latest meal in the controller so UI updates when you change the photo
         final currentMeal = controller.plannedMeals.firstWhere(
               (m) => m.id == meal.id,
           orElse: () => meal,
         );
 
-        // Logic for lists
         List<String> ingredientList = currentMeal.ingredients.contains('\n')
             ? currentMeal.ingredients.split('\n')
             : currentMeal.ingredients.split(',');
@@ -34,13 +33,33 @@ class MealDetailScreen extends StatelessWidget {
               pinned: true,
               backgroundColor: const Color(0xFF00A676),
               flexibleSpace: FlexibleSpaceBar(
-                background: Image.network(
-                  currentMeal.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.fastfood, size: 50, color: Colors.grey),
-                  ),
+                background: Stack(
+                  fit: StackFit.expand, // Forces children to fill the entire header
+                  children: [
+                    // 1. THE IMAGE AREA
+                    Image.network(
+                      currentMeal.imageUrl,
+                      fit: BoxFit.cover,
+                      // THIS BOX FIX: Ensures the placeholder fills the 250px height
+                      errorBuilder: (context, error, stackTrace) => _buildFullPlaceholder(),
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return _buildFullPlaceholder(); // While loading
+                      },
+                    ),
+
+                    // 2. THE EDIT BUTTON
+                    Positioned(
+                      right: 16,
+                      bottom: 16,
+                      child: FloatingActionButton.small(
+                        heroTag: "edit_btn_${currentMeal.id}",
+                        backgroundColor: Colors.white.withValues(alpha: 0.9),
+                        child: const Icon(Icons.edit_outlined, color: Color(0xFF00A676)),
+                        onPressed: () => _showImageSourceDialog(context, controller, currentMeal),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -65,21 +84,15 @@ class MealDetailScreen extends StatelessWidget {
                       style: TextStyle(color: Colors.grey[600], fontSize: 16),
                     ),
 
-                    // --- NEW: AI RESOLVE BANNER ---
                     if (currentMeal.isSocialPost) _buildResolveBanner(context, currentMeal, controller),
 
                     const Divider(height: 40),
 
-                    // --- CONDITIONAL UI: BLOG vs RECIPE ---
                     if (currentMeal.isSocialPost) ...[
                       const Text("Community Story", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
-                      Text(
-                        currentMeal.steps, // The raw content we saved
-                        style: const TextStyle(fontSize: 16, height: 1.5),
-                      ),
+                      Text(currentMeal.steps, style: const TextStyle(fontSize: 16, height: 1.5)),
                     ] else ...[
-                      // Normal Recipe View (Ingredients + Steps)
                       const Text("Ingredients", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
                       ..._buildIngredientItems(ingredientList),
@@ -88,7 +101,6 @@ class MealDetailScreen extends StatelessWidget {
                       const SizedBox(height: 10),
                       ..._buildStepItems(stepList),
                     ],
-
                     const SizedBox(height: 50),
                   ],
                 ),
@@ -100,7 +112,38 @@ class MealDetailScreen extends StatelessWidget {
     );
   }
 
-  // --- UI HELPERS ---
+  // --- THE "FIXED SIZE" PLACEHOLDER ---
+  Widget _buildFullPlaceholder() {
+    return Container(
+      width: double.infinity,
+      height: 250, // Matches expandedHeight
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [const Color(0xFF00A676).withValues(alpha: 0.2), Colors.white],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.restaurant_menu_rounded, size: 50, color: const Color(0xFF00A676).withValues(alpha: 0.4)),
+          const SizedBox(height: 12),
+          Text(
+            "NO PHOTO FOUND",
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF00A676).withValues(alpha: 0.5),
+                letterSpacing: 1.5
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- HELPERS (Banners, Items, Dialogs) ---
 
   Widget _buildResolveBanner(BuildContext context, Meal meal, PlannerController controller) {
     return Container(
@@ -113,25 +156,22 @@ class MealDetailScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.auto_awesome, color: Colors.amber, size: 20),
-              SizedBox(width: 10),
-              Expanded(child: Text("This is a blog post. Want to extract a structured recipe?", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+              const Icon(Icons.auto_awesome, color: Colors.amber, size: 20),
+              const SizedBox(width: 10),
+              const Expanded(child: Text("Want to organize this into a recipe?", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
             ],
           ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber.shade700,
-                  foregroundColor: Colors.white
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber.shade700, foregroundColor: Colors.white),
               onPressed: controller.isLoading.value ? null : () => controller.resolveRecipe(meal),
               child: controller.isLoading.value
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text("MAGIC FIX: AUTO-ORGANIZE"), // Much simpler name!
+                  : const Text("AUTO-ORGANIZE"),
             ),
           ),
         ],
@@ -169,5 +209,28 @@ class MealDetailScreen extends StatelessWidget {
         ],
       ),
     )).toList();
+  }
+
+  void _showImageSourceDialog(BuildContext context, PlannerController controller, Meal meal) {
+    final TextEditingController searchController = TextEditingController(text: meal.title);
+
+    Get.defaultDialog(
+      title: "Change Photo",
+      content: TextField(
+        controller: searchController,
+        decoration: const InputDecoration(labelText: "Search keyword..."),
+      ),
+      confirm: ElevatedButton(
+        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A676)),
+        onPressed: () async {
+          Get.back();
+          String newUrl = await controller.fetchMealImage(searchController.text, 0);
+          final updatedMeal = meal.copyWith(imageUrl: newUrl);
+          await controller.updateMeal(updatedMeal);
+          Get.snackbar("Success", "Photo updated!");
+        },
+        child: const Text("Update", style: TextStyle(color: Colors.white)),
+      ),
+    );
   }
 }

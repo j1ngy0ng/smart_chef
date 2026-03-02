@@ -56,6 +56,26 @@ class LocalDbService {
     );
   }
 
+  Future<void> updateAllMealsWithTitle({
+    required String title,
+    required String ingredients,
+    required String steps,
+    required int kcal,
+  }) async {
+    final db = await database;
+    await db.update(
+      'meals',
+      {
+        'ingredients': ingredients,
+        'steps': steps,
+        'kcal': kcal,
+        'isSocialPost': 0, // 0 = false in SQLite. This hides the "Fix" button for all.
+      },
+      where: 'title = ?',
+      whereArgs: [title],
+    );
+  }
+
   Future<List<Meal>> getMealsByDate(String dateString) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(

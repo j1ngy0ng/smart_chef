@@ -7,7 +7,6 @@ class Meal {
   final String ingredients;
   final String steps;
   final String date;
-  // NEW: Flag to identify if this is an unstructured community post
   final bool isSocialPost;
 
   Meal({
@@ -19,8 +18,32 @@ class Meal {
     required this.ingredients,
     required this.steps,
     required this.date,
-    this.isSocialPost = false, // Default is false (structured)
+    this.isSocialPost = false,
   });
+
+  Meal copyWith({
+    int? id,
+    String? title,
+    String? type,
+    int? kcal,
+    String? imageUrl,
+    String? ingredients,
+    String? steps,
+    String? date,
+    bool? isSocialPost,
+  }) {
+    return Meal(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      type: type ?? this.type,
+      kcal: kcal ?? this.kcal,
+      imageUrl: imageUrl ?? this.imageUrl,
+      ingredients: ingredients ?? this.ingredients,
+      steps: steps ?? this.steps,
+      date: date ?? this.date,
+      isSocialPost: isSocialPost ?? this.isSocialPost,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -32,7 +55,6 @@ class Meal {
       'ingredients': ingredients,
       'steps': steps,
       'date': date,
-      // SQLite stores booleans as 1 (true) or 0 (false)
       'isSocialPost': isSocialPost ? 1 : 0,
     };
   }
@@ -47,7 +69,6 @@ class Meal {
       ingredients: map['ingredients'],
       steps: map['steps'],
       date: map['date'],
-      // Convert the 1/0 back to a boolean
       isSocialPost: map['isSocialPost'] == 1,
     );
   }
