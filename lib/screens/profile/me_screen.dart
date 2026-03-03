@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import '/controllers/profile_controller.dart';
 import '/controllers/post_controller.dart';
 import '/screens/blog/post_detail_screen.dart';
+import 'engagement_screen.dart';
 
 class MeScreen extends StatefulWidget {
   const MeScreen({super.key});
@@ -115,6 +116,7 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Column(
         children: [
+          // ... Avatar and Username stay exactly the same ...
           GestureDetector(
             onTap: () {
               HapticFeedback.mediumImpact();
@@ -149,11 +151,34 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
           const SizedBox(height: 24),
           Row(
             children: [
-              // Use the new getter from PostController
               Expanded(child: _buildStatItem("Recipes", postController.myPosts.length.toString())),
               Container(height: 30, width: 1, color: Colors.grey[200]),
               Expanded(child: _buildStatItem("Liked", profileController.likedPosts.length.toString())),
             ],
+          ),
+          const SizedBox(height: 24),
+
+          // --- NEW FULL-WIDTH BUTTON HERE ---
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                // Navigate to the new Engagement Screen
+                Get.to(() => const EngagementScreen());
+              },
+              icon: const Icon(Icons.pie_chart_outline, color: Colors.white),
+              label: const Text(
+                  "View Engagement Stats",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+            ),
           ),
         ],
       ),
