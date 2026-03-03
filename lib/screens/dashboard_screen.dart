@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smart_chef/screens/planner/planner_screen.dart';
+import 'package:smart_chef/screens/waste/ingredients_choice.dart';
+import 'package:smart_chef/screens/waste/waste_screen.dart';
 import '/screens/blog/blog_feed_screen.dart';
 import '/screens/profile/me_screen.dart';
 import 'package:smart_chef/screens/health/nutrition_dashboard_screen.dart';
@@ -17,7 +19,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final List<Widget> pages = [
     BlogFeedScreen(),
     const SmartPlannerScreen(), //change this to your module - SHA
-    const MeScreen(), //change this to your module - WK
+    IngredientChoicePage(), //change this to your module - WK
     NutritionDashboardScreen(), //change this to your module - JX
     const MeScreen(),
   ];
