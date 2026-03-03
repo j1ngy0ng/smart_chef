@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import '/controllers/profile_controller.dart';
 import '/controllers/post_controller.dart';
@@ -120,25 +121,27 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
           GestureDetector(
             onTap: () {
               HapticFeedback.mediumImpact();
-              profileController.updateAvatar();
+              _showPickerOptions(); // Show the camera/gallery choice
             },
             child: Stack(
               alignment: Alignment.bottomRight,
               children: [
-                CircleAvatar(
+                Obx(() => CircleAvatar(
                   radius: 45,
                   backgroundColor: Colors.grey[100],
                   backgroundImage: profileController.avatarUrl.value.isNotEmpty
                       ? NetworkImage(profileController.avatarUrl.value)
                       : null,
-                  child: profileController.avatarUrl.value.isEmpty
-                      ? Icon(Icons.person, size: 40, color: Colors.grey[400])
+                  child: profileController.avatarUrl.value.isEmpty || profileController.isUploading.value
+                      ? profileController.isUploading.value
+                      ? const CircularProgressIndicator()
+                      : Icon(Icons.person, size: 40, color: Colors.grey[400])
                       : null,
-                ),
+                )),
                 CircleAvatar(
                   radius: 14,
                   backgroundColor: primaryGreen,
-                  child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                  child: const Icon(Icons.edit, size: 14, color: Colors.white),
                 ),
               ],
             ),
@@ -316,6 +319,44 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
         await profileController.updateProfile();
         Get.back(); // Closes dialog
       },
+    );
+  }
+
+  void _showPickerOptions() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Profile Photo", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF00A676)),
+              title: const Text("Take a Photo"),
+              onTap: () {
+                Get.back();
+                // Trigger the Camera hardware
+                profileController.updateAvatar(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF00A676)),
+              title: const Text("Choose from Gallery"),
+              onTap: () {
+                Get.back();
+                // Trigger the Gallery picker
+                profileController.updateAvatar(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
     );
   }
 }

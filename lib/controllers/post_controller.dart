@@ -1,11 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:smart_chef/controllers/profile_controller.dart';
 import '../models/post_model.dart';
+import '../screens/blog/post_detail_screen.dart';
 import '../services/supabase_service.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:async';
+import 'package:sensors_plus/sensors_plus.dart';
 
 class PostController extends GetxController {
   final SupabaseService _service = SupabaseService();
@@ -53,7 +57,9 @@ class PostController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchPosts(); // fetch posts on controller init
+    fetchPosts();
+    // Start listening for shakes as soon as the app starts
+    startShakeListener();
   }
 
   // ==========================
@@ -346,10 +352,70 @@ class PostController extends GetxController {
     }
   }
 
+  // ==========================
+  // Shake to Shuffle State
+  // ==========================
+  StreamSubscription? _shakeSubscription;
+  DateTime _lastShake = DateTime.now();
+
+  // ==========================
+  // Shake Logic
+  // ==========================
+  void startShakeListener() {
+    // If we already have a subscription, don't create another one
+    if (_shakeSubscription != null) return;
+
+    // Listen to accelerometer events
+    _shakeSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
+      // Calculate G-force magnitude (sum of absolute values of x, y, and z)
+      double acceleration = event.x.abs() + event.y.abs() + event.z.abs();
+
+      // Threshold 30 is a firm shake.
+      // Cooldown of 2 seconds prevents multiple popups.
+      if (acceleration > 30 && DateTime.now().difference(_lastShake).inSeconds > 2) {
+        _lastShake = DateTime.now();
+        _showRandomRecipe();
+      }
+    });
+  }
+
+  void _showRandomRecipe() {
+    // Only show if we actually have posts to shuffle
+    if (posts.isEmpty) return;
+
+    // 1. Give the user tactile feedback (Mobile Unique Feature!)
+    HapticFeedback.heavyImpact();
+
+    // 2. Select a random post from the list
+    final randomPost = (List<PostModel>.from(posts)..shuffle()).first;
+
+    // 3. Show the "Surprise" Dialog
+    Get.defaultDialog(
+      title: "Chef's Surprise! 🎲",
+      titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+      middleText: "Feeling lucky? How about cooking: \n\n ${randomPost.title}",
+      backgroundColor: Colors.white,
+      radius: 15,
+      textConfirm: "View Recipe",
+      confirmTextColor: Colors.white,
+      buttonColor: const Color(0xFF00A676),
+      onConfirm: () {
+        Get.back(); // Close dialog
+
+        // This is the line that handles the jump to the recipe
+        Get.to(() => PostDetailScreen(post: randomPost));
+      },
+      textCancel: "Try Again",
+      cancelTextColor: Colors.grey,
+    );
+  }
+
   @override
   void onClose() {
     titleController.dispose();
     contentController.dispose();
+    // CRITICAL: Cancel the sensor stream to save battery and prevent memory leaks
+    _shakeSubscription?.cancel();
     super.onClose();
   }
 }

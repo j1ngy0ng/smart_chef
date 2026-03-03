@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -80,7 +81,7 @@ class SupabaseService {
   /// Updated: allows uploading an avatar file
   Future<void> updateProfile({
     required String username,
-    File? avatarFile, // optional file to upload
+    File? avatarFile,
   }) async {
     final user = currentUser;
     if (user == null) return;
@@ -88,12 +89,17 @@ class SupabaseService {
     final data = {'username': username};
 
     if (avatarFile != null) {
+      // This path matches your screenshot folder
+      final fileName = 'profiles/${user.id}.png';
+
       final avatarUrl = await uploadImage(
         avatarFile,
-        'avatars/${user.id}_${DateTime.now().millisecondsSinceEpoch}.png',
+        fileName,
       );
+
       if (avatarUrl != null) {
-        data['avatar_url'] = avatarUrl;
+        // We add a timestamp here to force the UI to refresh immediately
+        data['avatar_url'] = "$avatarUrl?t=${DateTime.now().millisecondsSinceEpoch}";
       }
     }
 
@@ -175,7 +181,7 @@ class SupabaseService {
         path,
         file,
         fileOptions: FileOptions(
-          upsert: false,
+          upsert: true,
           contentType: 'image/png',
           metadata: {
             'user_id': _client.auth.currentUser!.id, // store owner ID
