@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import '/controllers/profile_controller.dart';
 import '/controllers/post_controller.dart';
 import '/screens/blog/post_detail_screen.dart';
+import 'engagement_screen.dart';
 
 class MeScreen extends StatefulWidget {
   const MeScreen({super.key});
@@ -115,28 +117,31 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Column(
         children: [
+          // ... Avatar and Username stay exactly the same ...
           GestureDetector(
             onTap: () {
               HapticFeedback.mediumImpact();
-              profileController.updateAvatar();
+              _showPickerOptions(); // Show the camera/gallery choice
             },
             child: Stack(
               alignment: Alignment.bottomRight,
               children: [
-                CircleAvatar(
+                Obx(() => CircleAvatar(
                   radius: 45,
                   backgroundColor: Colors.grey[100],
                   backgroundImage: profileController.avatarUrl.value.isNotEmpty
                       ? NetworkImage(profileController.avatarUrl.value)
                       : null,
-                  child: profileController.avatarUrl.value.isEmpty
-                      ? Icon(Icons.person, size: 40, color: Colors.grey[400])
+                  child: profileController.avatarUrl.value.isEmpty || profileController.isUploading.value
+                      ? profileController.isUploading.value
+                      ? const CircularProgressIndicator()
+                      : Icon(Icons.person, size: 40, color: Colors.grey[400])
                       : null,
-                ),
+                )),
                 CircleAvatar(
                   radius: 14,
                   backgroundColor: primaryGreen,
-                  child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                  child: const Icon(Icons.edit, size: 14, color: Colors.white),
                 ),
               ],
             ),
@@ -149,11 +154,34 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
           const SizedBox(height: 24),
           Row(
             children: [
-              // Use the new getter from PostController
               Expanded(child: _buildStatItem("Recipes", postController.myPosts.length.toString())),
               Container(height: 30, width: 1, color: Colors.grey[200]),
               Expanded(child: _buildStatItem("Liked", profileController.likedPosts.length.toString())),
             ],
+          ),
+          const SizedBox(height: 24),
+
+          // --- NEW FULL-WIDTH BUTTON HERE ---
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                // Navigate to the new Engagement Screen
+                Get.to(() => const EngagementScreen());
+              },
+              icon: const Icon(Icons.pie_chart_outline, color: Colors.white),
+              label: const Text(
+                  "View Engagement Stats",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+            ),
           ),
         ],
       ),
@@ -291,6 +319,44 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
         await profileController.updateProfile();
         Get.back(); // Closes dialog
       },
+    );
+  }
+
+  void _showPickerOptions() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Profile Photo", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF00A676)),
+              title: const Text("Take a Photo"),
+              onTap: () {
+                Get.back();
+                // Trigger the Camera hardware
+                profileController.updateAvatar(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF00A676)),
+              title: const Text("Choose from Gallery"),
+              onTap: () {
+                Get.back();
+                // Trigger the Gallery picker
+                profileController.updateAvatar(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
     );
   }
 }
