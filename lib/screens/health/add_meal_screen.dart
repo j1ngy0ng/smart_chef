@@ -542,14 +542,14 @@ class _AddMealScreenState extends State<AddMealScreen>
   }
 
   Widget _buildCartItem(MealCartItem item) {
-    return AnimatedContainer(
+    return Obx(() => AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         color: _C.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: item.isEditing
+          color: item.isEditing.value
               ? _C.primary.withOpacity(0.4)
               : Colors.transparent,
           width: 1.5,
@@ -597,13 +597,13 @@ class _AddMealScreenState extends State<AddMealScreen>
                             color: _C.text1),
                       ),
                       const SizedBox(height: 3),
-                      Obx(() => Text(
+                      Text(
                         '${item.servingGrams.toInt()}g  ·  ${item.calories.toInt()} kcal',
                         style: const TextStyle(
                             fontSize: 12, color: _C.text2),
-                      )),
+                      ),
                       const SizedBox(height: 5),
-                      Obx(() => Row(
+                      Row(
                         children: [
                           _macroMini('P',
                               item.protein.toStringAsFixed(1),
@@ -618,7 +618,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                               item.fat.toStringAsFixed(1),
                               _C.fat),
                         ],
-                      )),
+                      ),
                     ],
                   ),
                 ),
@@ -646,19 +646,16 @@ class _AddMealScreenState extends State<AddMealScreen>
               ],
             ),
           ),
-
           // Expandable serving editor
-          Obx(() => item.isEditing
-              ? _buildServingEditor(item)
-              : const SizedBox.shrink()),
+          if (item.isEditing.value) _buildServingEditor(item),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildServingEditor(MealCartItem item) {
     final controller = TextEditingController(
-        text: item.servingGrams.toInt().toString());
+        text: item.servingGrams.value.toInt().toString());
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
@@ -679,8 +676,9 @@ class _AddMealScreenState extends State<AddMealScreen>
                 icon: Icons.remove_rounded,
                 onTap: () {
                   final newVal =
-                  (item.servingGrams - 25).clamp(25, 9999);
-                  _ctrl.updateServing(item.cartId, newVal.toDouble());
+                  (item.servingGrams.value - 25).clamp(25.0, 9999.0);
+                  _ctrl.updateServing(item.cartId, newVal);
+                  controller.text = newVal.toInt().toString();
                 },
               ),
               const SizedBox(width: 10),
@@ -727,8 +725,9 @@ class _AddMealScreenState extends State<AddMealScreen>
               _servingBtn(
                 icon: Icons.add_rounded,
                 onTap: () {
-                  final newVal = item.servingGrams + 25;
+                  final newVal = (item.servingGrams.value + 25).toDouble();
                   _ctrl.updateServing(item.cartId, newVal);
+                  controller.text = newVal.toInt().toString();
                 },
               ),
             ],
@@ -741,14 +740,16 @@ class _AddMealScreenState extends State<AddMealScreen>
               child: Padding(
                 padding: const EdgeInsets.only(right: 4),
                 child: GestureDetector(
-                  onTap: () =>
-                      _ctrl.updateServing(item.cartId, g.toDouble()),
-                  child: Obx(() => Container(
+                  onTap: () {
+                    _ctrl.updateServing(item.cartId, g.toDouble());
+                    controller.text = g.toString();
+                  },
+                  child: Container(
                     padding:
                     const EdgeInsets.symmetric(vertical: 7),
                     decoration: BoxDecoration(
                       color:
-                      item.servingGrams.toInt() == g
+                      item.servingGrams.value.toInt() == g
                           ? _C.primary
                           : _C.bg,
                       borderRadius:
@@ -761,13 +762,13 @@ class _AddMealScreenState extends State<AddMealScreen>
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color:
-                          item.servingGrams.toInt() == g
+                          item.servingGrams.value.toInt() == g
                               ? Colors.white
                               : _C.text2,
                         ),
                       ),
                     ),
-                  )),
+                  ),
                 ),
               ),
             ))
@@ -775,7 +776,7 @@ class _AddMealScreenState extends State<AddMealScreen>
           ),
           const SizedBox(height: 10),
           // Live nutrition for this serving
-          Obx(() => Container(
+          Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: _C.primary.withOpacity(0.05),
@@ -795,7 +796,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                     '${item.fat.toStringAsFixed(1)}g', _C.fat),
               ],
             ),
-          )),
+          ),
           const SizedBox(height: 4),
           Align(
             alignment: Alignment.centerRight,
