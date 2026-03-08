@@ -98,7 +98,6 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
               _buildActivityRow(),
               const SizedBox(height: 16),
               _buildInsightsSection(),
-              _buildTodayMealsSection(),
               const SizedBox(height: 96), // FAB clearance
             ]),
           ),
@@ -441,7 +440,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
   // ── Water Tracker ───────────────────────────────────────────────────────────
   Widget _buildWaterCard() {
     return _card(
-      child: Column(
+        child: Obx(() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -464,17 +463,17 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                         fontWeight: FontWeight.w700,
                         color: _C.text1)),
               ]),
-              Obx(() => Text(
+              Text(
                 '${_ctrl.waterGlasses.value} / ${_ctrl.waterGoal} glasses',
                 style: const TextStyle(
                     fontSize: 13,
                     color: _C.water,
                     fontWeight: FontWeight.w600),
-              )),
+              ),
             ],
           ),
           const SizedBox(height: 14),
-          Obx(() => Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(
               _ctrl.waterGoal,
@@ -514,9 +513,9 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                 ),
               ),
             ),
-          )),
+          ),
           const SizedBox(height: 12),
-          Obx(() => ClipRRect(
+          ClipRRect(
             borderRadius: BorderRadius.circular(5),
             child: LinearProgressIndicator(
               value: _ctrl.waterProgress,
@@ -524,16 +523,16 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
               valueColor: const AlwaysStoppedAnimation(_C.water),
               minHeight: 6,
             ),
-          )),
+          ),
           const SizedBox(height: 6),
-          Obx(() => Text(
+          Text(
             '${_ctrl.waterGlasses.value * 250} ml consumed today',
             style:
             const TextStyle(fontSize: 11, color: _C.text3),
-          )),
+          ),
         ],
       ),
-    );
+        ));
   }
 
   // ── Activity Row ────────────────────────────────────────────────────────────
@@ -786,11 +785,10 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
   // ── FAB ─────────────────────────────────────────────────────────────────────
   Widget _buildFAB() {
     return FloatingActionButton.extended(
-      onPressed: () => Get.to(
-            () => const AddMealScreen(),
-        transition: Transition.downToUp,
-        duration: const Duration(milliseconds: 350),
-      ),
+      heroTag: 'add_meal_fab',
+      onPressed: () {
+        Get.to(() => const AddMealScreen(), transition: Transition.downToUp);
+      },
       backgroundColor: _C.primary,
       elevation: 8,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -843,234 +841,6 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   fontWeight: FontWeight.w600)),
         ),
       ],
-    );
-  }
-
-  Widget _buildTodayMealsSection() {
-    return Obx(() {
-      final logs = _ctrl.todayLogs;
-      if (logs.isEmpty) return const SizedBox.shrink();
-
-      // Group by meal type
-      final grouped = <String, List<NutritionLog>>{};
-      for (final log in logs) {
-        grouped.putIfAbsent(log.mealType, () => []).add(log);
-      }
-      const order = ['breakfast', 'lunch', 'dinner', 'snack'];
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Today's Meals",
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _C.text1)),
-              Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                    color: _C.primary.withOpacity(0.09),
-                    borderRadius: BorderRadius.circular(8)),
-                child: Text('${logs.length} items',
-                    style: const TextStyle(
-                        fontSize: 11,
-                        color: _C.primary,
-                        fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ...order
-              .where((type) => grouped.containsKey(type))
-              .map((type) => _buildMealGroup(type, grouped[type]!))
-              .toList(),
-        ],
-      );
-    });
-  }
-
-  Widget _buildMealGroup(String mealType, List<NutritionLog> logs) {
-    const emojis = {
-      'breakfast': '🌅',
-      'lunch': '☀️',
-      'dinner': '🌙',
-      'snack': '🍎',
-    };
-    final totalCal = logs.fold(0.0, (s, l) => s + l.calories);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: _C.card,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 3))
-        ],
-      ),
-      child: Column(
-        children: [
-          // Group header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Row(
-              children: [
-                Text(emojis[mealType] ?? '🍴',
-                    style: const TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
-                Text(
-                  mealType.capitalizeFirst ?? mealType,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: _C.text1),
-                ),
-                const Spacer(),
-                Text(
-                  '${totalCal.toInt()} kcal',
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _C.primary),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => Get.to(
-                        () => AddMealScreen(
-                        editLog: null), // opens add with meal type pre-set
-                    transition: Transition.downToUp,
-                  ),
-                  child: Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                        color: _C.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(7)),
-                    child: const Icon(Icons.add_rounded,
-                        color: _C.primary, size: 14),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Food items
-          ...logs.asMap().entries.map((entry) {
-            final i = entry.key;
-            final log = entry.value;
-            final isLast = i == logs.length - 1;
-            return Column(
-              children: [
-                if (i > 0)
-                  const Divider(
-                      color: _C.divider, height: 1, indent: 14, endIndent: 14),
-                _buildLogRow(log),
-                if (isLast) const SizedBox(height: 4),
-              ],
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLogRow(NutritionLog log) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(log.foodName,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _C.text1)),
-                const SizedBox(height: 2),
-                Text(
-                  '${log.servingSize.toInt()}g  ·  P:${log.protein.toInt()}g  C:${log.carbs.toInt()}g  F:${log.fat.toInt()}g',
-                  style: const TextStyle(fontSize: 11, color: _C.text3),
-                ),
-              ],
-            ),
-          ),
-          Text('${log.calories.toInt()} kcal',
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: _C.text2)),
-          const SizedBox(width: 8),
-          // Edit
-          GestureDetector(
-            onTap: () => Get.to(
-                  () => AddMealScreen(editLog: log),
-              transition: Transition.downToUp,
-            ),
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                  color: _C.primary.withOpacity(0.09),
-                  borderRadius: BorderRadius.circular(8)),
-              child: const Icon(Icons.edit_rounded,
-                  color: _C.primary, size: 14),
-            ),
-          ),
-          const SizedBox(width: 6),
-          // Delete
-          GestureDetector(
-            onTap: () => _confirmDelete(log),
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444).withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8)),
-              child: const Icon(Icons.delete_outline_rounded,
-                  color: Color(0xFFEF4444), size: 14),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(NutritionLog log) {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Item?',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        content: Text('Remove "${log.foodName}" from today\'s log?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel',
-                style: TextStyle(color: _C.text2)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              _ctrl.deleteLog(log.id);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Delete',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 

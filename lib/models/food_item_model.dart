@@ -1,8 +1,7 @@
-// ─────────────────────────────────────────────────────────────────────────────
+// models/food_item_model.dart
 // ADD THESE TWO CLASSES to your existing models/nutrition_model.dart
-// Place them at the bottom of the file, after NutritionInsight
-// ─────────────────────────────────────────────────────────────────────────────
 
+import 'package:get/get.dart';
 import 'nutrition_model.dart';
 
 /// Represents a food item from the search database or barcode scan.
@@ -77,22 +76,24 @@ class FoodItem {
 
 /// A cart item = FoodItem + chosen serving size, used in AddMealScreen session
 class MealCartItem {
-  final String cartId; // local only, not stored in DB
+  final String cartId;
   final FoodItem food;
-  double servingGrams;
-  bool isEditing;
+  // Rx fields so Obx() in the UI rebuilds when these change
+  final RxDouble servingGrams;
+  final RxBool isEditing;
 
   MealCartItem({
     required this.cartId,
     required this.food,
-    this.servingGrams = 100,
-    this.isEditing = false,
-  });
+    double initialServing = 100,
+    bool initialEditing = false,
+  })  : servingGrams = initialServing.obs,
+        isEditing = initialEditing.obs;
 
-  double get calories => food.caloriesPer100g * servingGrams / 100;
-  double get protein  => food.proteinPer100g  * servingGrams / 100;
-  double get carbs    => food.carbsPer100g    * servingGrams / 100;
-  double get fat      => food.fatPer100g      * servingGrams / 100;
+  double get calories => food.caloriesPer100g * servingGrams.value / 100;
+  double get protein  => food.proteinPer100g  * servingGrams.value / 100;
+  double get carbs    => food.carbsPer100g    * servingGrams.value / 100;
+  double get fat      => food.fatPer100g      * servingGrams.value / 100;
 
   /// Convert to NutritionLog for saving to Supabase
   NutritionLog toNutritionLog({
@@ -108,7 +109,7 @@ class MealCartItem {
       protein: protein,
       carbs: carbs,
       fat: fat,
-      servingSize: servingGrams,
+      servingSize: servingGrams.value,
       barcode: food.barcode,
       loggedAt: DateTime.now(),
     );

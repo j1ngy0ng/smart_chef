@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/nutrition_model.dart';
 import '../models/food_item_model.dart';
 import 'nutrition_controller.dart';
+import '../screens/health/food_camera_screen.dart';
 
 class AddMealController extends GetxController {
   final SupabaseClient _client = Supabase.instance.client;
@@ -70,7 +71,6 @@ class AddMealController extends GetxController {
     editingLog.value = log;
     selectedMealType.value = log.mealType;
 
-    // Pre-populate cart with the single item being edited
     final fakeFoodItem = FoodItem(
       id: log.id,
       name: log.foodName,
@@ -84,7 +84,7 @@ class AddMealController extends GetxController {
     cartItems.add(MealCartItem(
       cartId: 'edit_${log.id}',
       food: fakeFoodItem,
-      servingGrams: log.servingSize,
+      initialServing: log.servingSize,
     ));
   }
 
@@ -139,60 +139,36 @@ class AddMealController extends GetxController {
     }
   }
 
-  // ─── Barcode Scanner ──────────────────────────────────────────────────────────
   Future<void> scanBarcode() async {
-    // In production: integrate mobile_scanner package
-    // mobile_scanner: ^3.5.5 in pubspec.yaml
-    // Example real integration:
-    //
-    // final MobileScannerController scanCtrl = MobileScannerController();
-    // final result = await Get.to(() => MobileScanner(
-    //   controller: scanCtrl,
-    //   onDetect: (capture) {
-    //     final barcode = capture.barcodes.first.rawValue;
-    //     Get.back(result: barcode);
-    //   },
-    // ));
-    // if (result != null) await _lookupBarcode(result);
-
-    // Stub: simulate a barcode scan result
     isScanning.value = true;
-    await Future.delayed(const Duration(seconds: 1));
-    isScanning.value = false;
-
-    // Simulate finding a product
-    final mockResult = FoodItem.mockFoods().firstWhere(
-          (f) => f.name == 'Whey Protein Shake',
-    );
-    addToCart(mockResult);
-
-    Get.snackbar(
-      '📷 Barcode Scanned',
-      '${mockResult.name} found! Added to meal.',
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: const Color(0xFF4CAF50),
-      colorText: const Color(0xFFFFFFFF),
-    );
-  }
-
-  Future<void> _lookupBarcode(String barcode) async {
     try {
-      final data = await _client
-          .from('food_items')
-          .select()
-          .eq('barcode', barcode)
-          .maybeSingle();
+      final Map<String, dynamic>? foodData = await Get.to(
+            () => const FoodCameraScreen(),
+        transition: Transition.downToUp,
+      );
 
-      if (data != null) {
-        addToCart(FoodItem.fromMap(data));
-      } else {
-        Get.snackbar('❌ Not Found',
-            'No food found for barcode $barcode. Try searching manually.',
-            snackPosition: SnackPosition.TOP);
+      if (foodData != null && foodData.isNotEmpty) {
+        final estimatedGrams = (foodData['estimated_grams'] ?? 100).toDouble();
+
+        // Convert per_serving → per_100g for FoodItem storage
+        final factor = estimatedGrams > 0 ? (100 / estimatedGrams) : 1.0;
+
+        final food = FoodItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: foodData['food_name'] ?? 'Unknown Food',
+          caloriesPer100g: (foodData['calories_per_serving'] ?? 0).toDouble() * factor,
+          proteinPer100g:  (foodData['protein_per_serving']  ?? 0).toDouble() * factor,
+          carbsPer100g:    (foodData['carbs_per_serving']    ?? 0).toDouble() * factor,
+          fatPer100g:      (foodData['fat_per_serving']      ?? 0).toDouble() * factor,
+        );
+        addToCart(food);
+
+        // Set serving size to what Gemini estimated
+        final cartId = cartItems.last.cartId;
+        updateServing(cartId, estimatedGrams);
       }
-    } catch (e) {
-      Get.snackbar('❌ Error', 'Barcode lookup failed.',
-          snackPosition: SnackPosition.TOP);
+    } finally {
+      isScanning.value = false;
     }
   }
 
@@ -209,16 +185,16 @@ class AddMealController extends GetxController {
     cartItems.add(MealCartItem(
       cartId: '${food.id}_${DateTime.now().millisecondsSinceEpoch}',
       food: food,
-      servingGrams: 100,
+      initialServing: 100,
     ));
     clearSearch();
   }
 
   void updateServing(String cartId, double grams) {
-    final idx = cartItems.indexWhere((i) => i.cartId == cartId);
-    if (idx == -1) return;
-    cartItems[idx].servingGrams = grams.clamp(1, 9999);
-    cartItems.refresh(); // force Obx rebuild
+    final item = cartItems.firstWhereOrNull((i) => i.cartId == cartId);
+    if (item == null) return;
+    item.servingGrams.value = grams.clamp(1, 9999);
+    // cartItems.refresh() not needed — item.servingGrams is its own Rx
   }
 
   void removeFromCart(String cartId) {
@@ -226,13 +202,9 @@ class AddMealController extends GetxController {
   }
 
   void toggleEditing(String cartId) {
-    final idx = cartItems.indexWhere((i) => i.cartId == cartId);
-    if (idx == -1) return;
-    // Close all others first
-    for (var i = 0; i < cartItems.length; i++) {
-      cartItems[i].isEditing = (i == idx) ? !cartItems[i].isEditing : false;
+    for (final item in cartItems) {
+      item.isEditing.value = (item.cartId == cartId) ? !item.isEditing.value : false;
     }
-    cartItems.refresh();
   }
 
   // ─── Save / Update ────────────────────────────────────────────────────────────
@@ -293,7 +265,7 @@ class AddMealController extends GetxController {
       'protein': item.protein,
       'carbs': item.carbs,
       'fat': item.fat,
-      'serving_size': item.servingGrams,
+      'serving_size': item.servingGrams.value,
     }).eq('id', log.id);
   }
 
