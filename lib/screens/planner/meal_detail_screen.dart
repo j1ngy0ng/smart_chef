@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../models/grocery_item.dart';
 import '../../models/meal_model.dart';
 import '../../controllers/planner_controller.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import '../../theme/colors.dart';
 
 class MealDetailScreen extends StatelessWidget {
   final Meal meal;
@@ -66,6 +66,23 @@ class MealDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        //add to grocery list button
+                        Padding(
+                          padding: const EdgeInsets.only(top: 15, bottom: 5),
+                          child: FloatingActionButton.small(
+                            heroTag: "grocery_btn_${currentMeal.id}",
+                            backgroundColor: Colors.white,
+                            elevation: 2,
+                            child: const Icon(Icons.add_shopping_cart_outlined, color: Color(0xFF00A676)),
+                            onPressed: () => showGroceryBottomSheet(context, controller, ingredientList),
+                          ),
+                        ),
+                      ],
+                    ),
+
                     Text(
                       currentMeal.type.toUpperCase(),
                       style: const TextStyle(color: Color(0xFF00A676), fontWeight: FontWeight.bold, letterSpacing: 1.2),
@@ -141,6 +158,76 @@ class MealDetailScreen extends StatelessWidget {
   }
 
   // --- HELPERS (Banners, Items, Dialogs) ---
+
+  void showGroceryBottomSheet(BuildContext context, PlannerController controller, List<String> ingredients) {
+    // 1. Persistent State Maps
+    final Map<String, TextEditingController> textControllers = {
+      for (var i in ingredients) i: TextEditingController(text: i)
+    };
+    final Map<String, RxBool> isSelected = {for (var i in ingredients) i: true.obs};
+    final Map<String, RxString> categorySelections = {for (var i in ingredients) i: "General".obs};
+
+    final List<String> categories = ["General", "Produce", "Dairy", "Protein", "Bakery", "Other"];
+
+    Get.bottomSheet(
+      Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+        child: Column(
+          children: [
+            const Text("Modify & Add to List", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Expanded(
+              child: ListView.separated(
+                itemCount: ingredients.length,
+                separatorBuilder: (_, __) => const Divider(),
+                itemBuilder: (context, index) {
+                  final item = ingredients[index];
+                  return Column(
+                    children: [
+                      // Checkbox + Editable Text
+                      Obx(() => CheckboxListTile(
+                        value: isSelected[item]!.value,
+                        onChanged: (val) => isSelected[item]!.value = val!,
+                        title: TextField(
+                          controller: textControllers[item],
+                          decoration: const InputDecoration(border: InputBorder.none),
+                        ),
+                      )),
+                      // Category Selection
+                      Obx(() => DropdownButtonFormField<String>(
+                        isDense: true,
+                        decoration: const InputDecoration(labelText: "Category", border: OutlineInputBorder()),
+                        initialValue: categorySelections[item]!.value,
+                        items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        onChanged: (val) => categorySelections[item]!.value = val!,
+                      )),
+                    ],
+                  );
+                },
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                for (var item in ingredients) {
+                  if (isSelected[item]!.value) {
+                    controller.toggleGroceryItem(GroceryItem(
+                      id: textControllers[item]!.text, // Use the MODIFIED text
+                      name: textControllers[item]!.text,
+                      category: categorySelections[item]!.value,
+                    ));
+                  }
+                }
+                Get.back();
+              },
+              child: const Text("Confirm & Add"),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
 
   Widget _buildResolveBanner(BuildContext context, Meal meal, PlannerController controller) {
     return Container(
@@ -251,8 +338,8 @@ class MealDetailScreen extends StatelessWidget {
                 children: ['Breakfast', 'Lunch', 'Dinner'].map((type) => ChoiceChip(
                   label: Text(type),
                   selected: selectedType.value == type,
-                  selectedColor: C.primary,
-                  labelStyle: TextStyle(color: selectedType.value == type ? Colors.white : C.text1),
+                  selectedColor: Color(0xFF00A676),
+                  labelStyle: TextStyle(color: selectedType.value == type ? Colors.white : Colors.black),
                   onSelected: (_) => selectedType.value = type,
                 )).toList(),
               )),
@@ -270,7 +357,7 @@ class MealDetailScreen extends StatelessWidget {
               const SizedBox(height: 10),
 
               ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: C.primary.withOpacity(0.1), foregroundColor: C.primary, minimumSize: const Size(double.infinity, 50)),
+                style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF00A676).withValues(alpha: 0.1), foregroundColor: Color(0xFF00A676), minimumSize: const Size(double.infinity, 50)),
                 onPressed: () async {
                   final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
                   if (picked != null) {
@@ -284,7 +371,7 @@ class MealDetailScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: C.primary, minimumSize: const Size(double.infinity, 50)),
+                style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF00A676), minimumSize: const Size(double.infinity, 50)),
                 onPressed: () async {
                   await controller.updateMeal(meal.copyWith(
                     title: titleController.text,

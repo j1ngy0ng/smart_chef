@@ -6,6 +6,7 @@ import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import '../../controllers/planner_controller.dart';
 import '../../controllers/post_controller.dart';
 import '../../models/meal_model.dart';
+import 'grocery_list_screen.dart';
 import 'meal_detail_screen.dart';
 import 'dart:io';
 
@@ -30,6 +31,12 @@ class SmartPlannerScreen extends GetView<PlannerController> {
         spacing: 12,
         children: [
           SpeedDialChild(
+            child: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+            backgroundColor: const Color(0xFF00A676),
+            label: 'View Grocery List',
+            onTap: () => Get.to(() => GroceryListScreen()),
+          ),
+          SpeedDialChild(
             child: const Icon(Icons.auto_awesome, color: Colors.white),
             backgroundColor: const Color(0xFF00A676),
             label: 'Smart AI Generation',
@@ -37,7 +44,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
           ),
           SpeedDialChild(
             child: const Icon(Icons.search, color: Colors.white),
-            backgroundColor: Colors.blueAccent,
+            backgroundColor: Color(0xFF00A676),
             label: 'Community Favorites',
             onTap: () => _showAddOptionSheet(context, controller, postController),
           ),
@@ -302,13 +309,26 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                 headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
               )),
               const SizedBox(height: 20),
-              const Align(alignment: Alignment.centerLeft, child: Text("Include Meals:", style: TextStyle(fontWeight: FontWeight.bold))),
-              Obx(() => Wrap(
+              const Align(alignment: Alignment.centerLeft, child: Text("Include Meals:", style: TextStyle(fontWeight: FontWeight.bold))),Obx(() => Wrap(
                 spacing: 10,
                 children: ['Breakfast', 'Lunch', 'Dinner'].map((type) {
+                  bool isSelected = selectedTypes.contains(type);
+
                   return FilterChip(
-                    label: Text(type),
-                    selected: selectedTypes.contains(type),
+                    label: Text(
+                      type,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : const Color(0xFF00A676),
+                      ),
+                    ),
+                    selected: isSelected,
+
+                    // --- HERE IS THE COLOR CHANGE ---
+                    selectedColor: const Color(0xFF00A676),
+
+                    // Optional: Set a different color when NOT selected (e.g., light grey)
+                    backgroundColor: Colors.grey.shade200,
+
                     onSelected: (val) => val ? selectedTypes.add(type) : selectedTypes.remove(type),
                   );
                 }).toList(),
@@ -448,16 +468,52 @@ class SmartPlannerScreen extends GetView<PlannerController> {
   }
 
   void _showDeleteDialog(Meal meal, PlannerController controller) {
-    Get.defaultDialog(
-      title: "Delete Meal?",
-      middleText: "Remove ${meal.title} from your plan?",
-      textConfirm: "Delete",
-      confirmTextColor: Colors.white,
-      buttonColor: Colors.red,
-      onConfirm: () {
-        controller.deleteMeal(meal.id!);
-        Get.back();
-      },
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(25),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.delete_forever, color: Colors.red, size: 50),
+            const SizedBox(height: 15),
+            const Text("Delete Meal", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Text("Are you sure you want to remove '${meal.title}' from your plan? This action cannot be undone.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600])),
+            const SizedBox(height: 25),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Get.back(),
+                    child: const Text("Cancel"),
+                  ),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                    onPressed: () {
+                      controller.deleteMeal(meal.id!);
+                      Get.back();
+                      Get.snackbar("Deleted", "Meal removed from your plan",
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.black87,
+                          colorText: Colors.white);
+                    },
+                    child: const Text("Delete"),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
