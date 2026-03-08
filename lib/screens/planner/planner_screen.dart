@@ -7,6 +7,7 @@ import '../../controllers/planner_controller.dart';
 import '../../controllers/post_controller.dart';
 import '../../models/meal_model.dart';
 import 'meal_detail_screen.dart';
+import 'dart:io';
 
 class SmartPlannerScreen extends GetView<PlannerController> {
   const SmartPlannerScreen({super.key});
@@ -351,101 +352,97 @@ class SmartPlannerScreen extends GetView<PlannerController> {
   // --- MEAL CARD ---
 
   Widget _buildMealCard(Meal meal, PlannerController controller) {
-    return GestureDetector(
-      onTap: () => Get.to(() => MealDetailScreen(meal: meal)),
-      onLongPress: () => _showDeleteDialog(meal, controller),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.1),
-                blurRadius: 10,
-                spreadRadius: 2)
-          ],
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              child: Hero(
-                tag: 'meal-${meal.id}',
-                child: Image.network(
-                  meal.imageUrl,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  // --- FIX: Beautiful Full-Size Placeholder ---
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 180, // Forces the box to be the same height as a photo
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF00A676).withValues(alpha: 0.1),
-                          Colors.white,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.restaurant_menu_rounded,
-                            size: 45,
-                            color: const Color(0xFF00A676).withValues(alpha: 0.3),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "PHOTO COMING SOON",
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                              color: const Color(0xFF00A676).withValues(alpha: 0.4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+    // Use Obx to make the card listen to updates in the controller
+    return Obx(() {
+      // Re-fetch the meal from the list so we have the absolute latest version
+      final currentMeal = controller.plannedMeals.firstWhere(
+            (m) => m.id == meal.id,
+        orElse: () => meal,
+      );
+
+      return GestureDetector(
+        onTap: () => Get.to(() => MealDetailScreen(meal: currentMeal)),
+        onLongPress: () => _showDeleteDialog(currentMeal, controller),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  spreadRadius: 2)
+            ],
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Hero(
+                  tag: 'meal-${currentMeal.id}',
+                  // Use the helper you already have to handle File vs Network
+                  child: _buildCardImage(currentMeal.imageUrl),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(meal.type.toUpperCase(),
-                          style: const TextStyle(
-                              color: Color(0xFF00A676),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12)),
-                      Text("${meal.kcal} kcal",
-                          style: const TextStyle(
-                              color: Colors.grey, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(meal.title,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold)),
-                ],
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(currentMeal.type.toUpperCase(),
+                            style: const TextStyle(color: Color(0xFF00A676), fontWeight: FontWeight.bold, fontSize: 12)),
+                        Text("${currentMeal.kcal} kcal",
+                            style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(currentMeal.title,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      );
+    });
+  }
+
+  Widget _buildCardImage(String imageUrl) {
+    bool isLocalFile = imageUrl.startsWith('/') || imageUrl.startsWith('data/'); // Add 'data/' for some Android paths
+
+    if (isLocalFile && File(imageUrl).existsSync()) {
+      return Image.file(File(imageUrl), height: 180, width: double.infinity, fit: BoxFit.cover);
+    }
+
+    return Image.network(
+      imageUrl,
+      height: 180,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _buildPlaceholder(), // Use your existing placeholder
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      height: 180,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [const Color(0xFF00A676).withValues(alpha: 0.1), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Icon(Icons.restaurant_menu_rounded, size: 45, color: Color(0xFF00A676)),
       ),
     );
   }
