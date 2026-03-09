@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 class C {
   C._();
 
-  static const primary   = Color(0xFF4CAF50);
-  static const dark      = Color(0xFF2E7D32);
-  static const accent    = Color(0xFFA506A7);
+  static const primary   = Color(0xFF00A676);
+  static const primaryLight = Color(0x3300A676);
+  static const dark      = Color(0xFF007A57);
+  static const accent    = Color(0xFF00A676);
   static const bg        = Color(0xFFF5FAF5);
   static const card      = Colors.white;
   static const text1     = Color(0xFF111827);

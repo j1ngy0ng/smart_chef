@@ -12,6 +12,7 @@ import '../../screens/health/add_meal_screen.dart';
 import '../../controllers/add_meal_controller.dart';
 import '../../models/food_item_model.dart';
 import '../../theme/colors.dart';
+import 'meal_history_screen.dart';
 
 typedef _C = C;
 
@@ -320,11 +321,16 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
 
   // ── Macro Card ──────────────────────────────────────────────────────────────
   Widget _buildMacroCard() {
-    return _card(
-      child: Column(
+    return GestureDetector(
+        onTap: () => Get.to(
+          () => const MealHistoryScreen(),
+      transition: Transition.rightToLeft,
+    ),
+    child: _card(
+    child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader('Macronutrients', 'Daily'),
+          _sectionHeader('Macronutrients', 'View History →'),
           const SizedBox(height: 16),
           AnimatedBuilder(
             animation: _barsAnim,
@@ -363,6 +369,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
           ),
         ],
       ),
+    ),
     );
   }
 

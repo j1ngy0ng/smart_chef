@@ -8,7 +8,7 @@ import 'nutrition_model.dart';
 /// Used to populate the search results list in AddMealScreen.
 class FoodItem {
   final String id;
-  final String name;
+  String name;
   final String brand;
   final double caloriesPer100g;
   final double proteinPer100g;
@@ -81,6 +81,7 @@ class MealCartItem {
   // Rx fields so Obx() in the UI rebuilds when these change
   final RxDouble servingGrams;
   final RxBool isEditing;
+  final RxString foodName;
 
   MealCartItem({
     required this.cartId,
@@ -88,7 +89,8 @@ class MealCartItem {
     double initialServing = 100,
     bool initialEditing = false,
   })  : servingGrams = initialServing.obs,
-        isEditing = initialEditing.obs;
+        isEditing = initialEditing.obs,
+        foodName = food.name.obs;
 
   double get calories => food.caloriesPer100g * servingGrams.value / 100;
   double get protein  => food.proteinPer100g  * servingGrams.value / 100;

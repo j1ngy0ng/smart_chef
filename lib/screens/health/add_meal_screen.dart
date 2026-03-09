@@ -578,7 +578,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                   ),
                   child: Center(
                     child: Text(
-                      _foodEmoji(item.food.name),
+                      _foodEmoji(item.foodName.value),
                       style: const TextStyle(fontSize: 22),
                     ),
                   ),
@@ -589,12 +589,31 @@ class _AddMealScreenState extends State<AddMealScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item.food.name,
+                      Obx(() => item.isEditing.value
+                          ? TextField(
+                        controller: TextEditingController(text: item.foodName.value)
+                          ..selection = TextSelection.collapsed(offset: item.foodName.value.length),
                         style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: _C.text1),
+                            fontSize: 15, fontWeight: FontWeight.w700, color: _C.text1),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: _C.primary.withOpacity(0.4)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: _C.primary),
+                          ),
+                        ),
+                        onChanged: (val) => item.foodName.value = val, // ← needs model fix below
+                      )
+                          : Text(
+                        item.foodName.value,
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700, color: _C.text1),
+                      ),
                       ),
                       const SizedBox(height: 3),
                       Text(
