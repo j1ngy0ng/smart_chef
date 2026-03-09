@@ -58,7 +58,7 @@ class PlannerController extends GetxController {
   Future<void> updateGroceryPrice(GroceryItem item, double newPrice) async {
     item.price = newPrice;
     // Pass the category here so the DB doesn't lose it or throw an error!
-    await _dbService.upsertGroceryItem(item.name, newPrice, item.category ?? "General");
+    await _dbService.upsertGroceryItem(item.name, newPrice, item.category);
     groceryList.refresh();
   }
 
@@ -84,7 +84,7 @@ class PlannerController extends GetxController {
     Map<String, double> totals = {};
     for (var item in groceryList) {
       // We use the category stored in the item, or default to 'General'
-      String cat = item.category ?? "General";
+      String cat = item.category;
       totals[cat] = (totals[cat] ?? 0) + item.price;
     }
     return totals;

@@ -180,7 +180,7 @@ class MealDetailScreen extends StatelessWidget {
             Expanded(
               child: ListView.separated(
                 itemCount: ingredients.length,
-                separatorBuilder: (_, __) => const Divider(),
+                separatorBuilder: (_, _) => const Divider(),
                 itemBuilder: (context, index) {
                   final item = ingredients[index];
                   return Column(

@@ -501,10 +501,6 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                     onPressed: () {
                       controller.deleteMeal(meal.id!);
                       Get.back();
-                      Get.snackbar("Deleted", "Meal removed from your plan",
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.black87,
-                          colorText: Colors.white);
                     },
                     child: const Text("Delete"),
                   ),
