@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'waste_screen.dart'; // Ensure this matches your file name
+import 'waste_screen.dart';
 
 // --- Design System Constants ---
 const Color kPrimaryGreen = Color(0xFF4CAF50);

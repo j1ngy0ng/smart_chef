@@ -24,7 +24,7 @@ class FoodWastePage extends StatefulWidget {
 
 class _FoodWastePageState extends State<FoodWastePage> {
   List<String> leftoverIngredients = [];
-  File? imageFile;
+  List<File> scannedImages = [];
   bool isProcessing = false;
   final picker = ImagePicker();
   final TextEditingController ingredientController = TextEditingController();
@@ -32,21 +32,40 @@ class _FoodWastePageState extends State<FoodWastePage> {
   // --- Logic Methods ---
   Future<void> pickImage() async {
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
     if (pickedFile != null) {
+      final file = File(pickedFile.path);
+
       setState(() {
-        imageFile = File(pickedFile.path);
+        scannedImages.add(file);
         isProcessing = true;
       });
-      await detectIngredients(File(pickedFile.path));
+
+      await detectIngredients(file);
     }
   }
 
   Future<void> detectIngredients(File image) async {
     try {
-      final detected = await GeminiService.detectIngredients(image);
-      setState(() => leftoverIngredients.addAll(detected));
+      final List<String> detected =
+      await GeminiService.detectIngredients(image);
+
+      if (detected.isEmpty) {
+        _showError("No ingredients detected. Try again.");
+        return;
+      }
+
+      setState(() {
+        for (String ingredient in detected) {
+          if (!leftoverIngredients.contains(ingredient)) {
+            leftoverIngredients.add(ingredient);
+          }
+        }
+      });
+
     } catch (e) {
-      _showError("Failed to detect ingredients: $e");
+      _showError("Failed to detect ingredients");
+      print(e);
     } finally {
       setState(() => isProcessing = false);
     }
@@ -83,7 +102,8 @@ class _FoodWastePageState extends State<FoodWastePage> {
         recipes = await GeminiService.generateRecipes(leftoverIngredients);
       } else {
         // 1. Fetch from Spoonacular
-        final spoonacularRecipes = await RecipeService.fetchRecipes(6);
+        final spoonacularRecipes =
+        await RecipeService.fetchRecipesByIngredients(leftoverIngredients);
 
         // 2. 🟢 FIX: Map ALL fields, including kcal and duration
         recipes = spoonacularRecipes.map((r) => {
@@ -156,7 +176,7 @@ class _FoodWastePageState extends State<FoodWastePage> {
                     _buildInputArea(),
                     const SizedBox(height: 24),
                     _buildIngredientGrid(),
-                    if (imageFile != null) _buildImagePreview(),
+                    if (scannedImages.isNotEmpty) _buildImagePreview(),
                   ],
                 ),
               ),
@@ -192,23 +212,31 @@ class _FoodWastePageState extends State<FoodWastePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(kRadius),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
       ),
-      child: isScan && leftoverIngredients.isEmpty
-          ? _buildScanButton()
-          : _buildManualField(),
+      child: Column(
+        children: [
+          if (isScan) _buildScanButton(),
+          if (!isScan) _buildManualField(),
+        ],
+      ),
     );
   }
 
   Widget _buildScanButton() {
     return InkWell(
-      onTap: pickImage,
+      onTap: isProcessing ? null : pickImage,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 40),
         decoration: BoxDecoration(
-          // The border already defaults to solid
           border: Border.all(
             color: kPrimaryGreen.withOpacity(0.3),
             width: 2,
@@ -217,11 +245,14 @@ class _FoodWastePageState extends State<FoodWastePage> {
         ),
         child: Column(
           children: [
-            const Icon(Icons.camera_alt_outlined, size: 48, color: kPrimaryGreen),
+            isProcessing
+                ? const CircularProgressIndicator()
+                : const Icon(Icons.camera_alt_outlined,
+                size: 48, color: kPrimaryGreen),
             const SizedBox(height: 12),
             Text(
-              "Tap to scan ingredients",
-              style: GoogleFonts.poppins( // Using Poppins here for consistency
+              isProcessing ? "Detecting ingredients..." : "Tap to scan ingredients",
+              style: GoogleFonts.poppins(
                 color: kPrimaryGreen,
                 fontWeight: FontWeight.w600,
               ),
@@ -300,9 +331,26 @@ class _FoodWastePageState extends State<FoodWastePage> {
   Widget _buildImagePreview() {
     return Padding(
       padding: const EdgeInsets.only(top: 24),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(kRadius),
-        child: Image.file(imageFile!, height: 180, width: double.infinity, fit: BoxFit.cover),
+      child: SizedBox(
+        height: 120,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: scannedImages.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(kRadius),
+                child: Image.file(
+                  scannedImages[index],
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
