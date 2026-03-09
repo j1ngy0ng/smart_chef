@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import '../models/grocery_item.dart';
 import '../models/meal_model.dart';
 import '../models/post_model.dart';
 import '../services/local_db_service.dart';
@@ -17,11 +18,76 @@ class PlannerController extends GetxController {
   var focusedDay = DateTime.now().obs;
   var searchQuery = "".obs;
   var selectedCategory = "All".obs;
+  // State for Grocery
+  var groceryList = <GroceryItem>[].obs; // Use your new GroceryItem model
+  var priceCache = <String, double>{}.obs; // The "Smart" memory
+  // Calculated Totals
+  double get totalGroceryPrice => groceryList.fold(0, (sum, item) => sum + item.price);
 
   @override
   void onInit() {
     super.onInit();
     fetchMealsForDate(selectedDay.value);
+    loadGroceryList();
+  }
+
+  // --- Grocery List Logic ---
+
+  // 1. Initial Load: Call this in onInit()
+  Future<void> loadGroceryList() async {
+    final List<Map<String, dynamic>> items = await _dbService.getAllGroceryItems();
+
+    // Clean! Uses the factory you just made
+    groceryList.assignAll(items.map((map) => GroceryItem.fromMap(map)).toList());
+  }
+
+  // 2. The "Add/Remove" Toggle
+  Future<void> toggleGroceryItem(GroceryItem item) async {
+    if (groceryList.any((i) => i.name == item.name)) {
+      // Remove from list and DB
+      groceryList.removeWhere((i) => i.name == item.name);
+      await _dbService.removeGroceryItem(item.name);
+    } else {
+      // Add to list and DB
+      groceryList.add(item);
+      await _dbService.upsertGroceryItem(item.name, item.price, item.category);
+    }
+  }
+
+  // 3. Update Price (The "Live Editor")
+  Future<void> updateGroceryPrice(GroceryItem item, double newPrice) async {
+    item.price = newPrice;
+    // Pass the category here so the DB doesn't lose it or throw an error!
+    await _dbService.upsertGroceryItem(item.name, newPrice, item.category);
+    groceryList.refresh();
+  }
+
+  Future<void> editGroceryItem({
+    required String oldName,
+    required String newName,
+    required double newPrice,
+    required String newCategory,
+  }) async {
+    // 1. Remove old entry if the name changed
+    if (oldName != newName) {
+      await _dbService.removeGroceryItem(oldName);
+    }
+
+    // 2. Update/Insert new entry
+    await _dbService.upsertGroceryItem(newName, newPrice, newCategory);
+
+    // 3. Refresh list
+    await loadGroceryList();
+  }
+
+  Map<String, double> get categoryTotals {
+    Map<String, double> totals = {};
+    for (var item in groceryList) {
+      // We use the category stored in the item, or default to 'General'
+      String cat = item.category;
+      totals[cat] = (totals[cat] ?? 0) + item.price;
+    }
+    return totals;
   }
 
   // --- Database Methods ---

@@ -16,27 +16,30 @@ class LocalDbService {
 
     return await openDatabase(
       path,
-      version: 2, // Bumped version to add new column
+      version: 1, // Reset to version 1
       onCreate: (db, version) async {
+        // Single source of truth for your tables
         await db.execute('''
-          CREATE TABLE meals(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            type TEXT,
-            kcal INTEGER,
-            imageUrl TEXT,
-            ingredients TEXT,
-            steps TEXT,
-            date TEXT,
-            isSocialPost INTEGER DEFAULT 0 
-          )
-        ''');
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          // Adds the column to existing tables without deleting data
-          await db.execute('ALTER TABLE meals ADD COLUMN isSocialPost INTEGER DEFAULT 0');
-        }
+        CREATE TABLE meals(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT,
+          type TEXT,
+          kcal INTEGER,
+          imageUrl TEXT,
+          ingredients TEXT,
+          steps TEXT,
+          date TEXT,
+          isSocialPost INTEGER DEFAULT 0 
+        )
+      ''');
+
+        await db.execute('''
+        CREATE TABLE grocery_items(
+          name TEXT PRIMARY KEY,
+          price REAL,
+          category TEXT DEFAULT 'General'
+        )
+      ''');
       },
     );
   }
@@ -93,5 +96,26 @@ class LocalDbService {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  // --- NEW GROCERY METHODS ---
+
+  Future<int> upsertGroceryItem(String name, double price, String category) async {
+    final db = await database;
+    return await db.insert(
+      'grocery_items',
+      {'name': name, 'price': price, 'category': category},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllGroceryItems() async {
+    final db = await database;
+    return await db.query('grocery_items');
+  }
+
+  Future<int> removeGroceryItem(String name) async {
+    final db = await database;
+    return await db.delete('grocery_items', where: 'name = ?', whereArgs: [name]);
   }
 }
