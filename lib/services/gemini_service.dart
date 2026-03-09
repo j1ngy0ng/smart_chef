@@ -13,7 +13,9 @@ class GeminiService {
   static Future<List<String>> detectIngredients(File image) async {
     final bytes = await image.readAsBytes();
     final base64Image = base64Encode(bytes);
-    final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey");
+
+    final url = Uri.parse(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey");
 
     final response = await http.post(
       url,
@@ -22,21 +24,62 @@ class GeminiService {
         "contents": [
           {
             "parts": [
-              {"text": "Identify all food ingredients in this image. Return only a comma-separated list."},
-              {"inline_data": {"mime_type": "image/jpeg", "data": base64Image}}
+              {
+                "text": """
+Identify all visible food ingredients in this image.
+
+Rules:
+- Only return ingredient names
+- Use lowercase
+- Comma separated
+- No sentences
+
+Example:
+tomato, egg, onion
+"""
+              },
+              {
+                "inline_data": {
+                  "mime_type": "image/jpeg",
+                  "data": base64Image
+                }
+              }
             ]
           }
         ]
       }),
     );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final text = data["candidates"][0]["content"]["parts"][0]["text"] ?? "";
-      return text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-    } else {
-      throw Exception("Gemini Error: ${response.body}");
+    if (response.statusCode != 200) {
+      throw Exception("Gemini request failed: ${response.body}");
     }
+
+    final data = jsonDecode(response.body);
+
+    if (data["candidates"] == null || data["candidates"].isEmpty) {
+      return [];
+    }
+
+    final parts = data["candidates"][0]["content"]["parts"];
+
+    if (parts == null || parts.isEmpty) {
+      return [];
+    }
+
+    final text = parts[0]["text"] ?? "";
+
+    print("Gemini response: $text");
+
+    List<String> ingredients = [];
+
+    for (String item in text.toLowerCase().split(",")) {
+      final cleaned = item.trim();
+      if (cleaned.isNotEmpty) {
+        ingredients.add(cleaned);
+      }
+    }
+
+    return ingredients;
   }
 
   // 🔹 Generate Recipes (Updated specifically for kcal/duration)
@@ -155,25 +198,25 @@ class GeminiService {
                 },
                 {
                   'text': '''You are a nutrition expert. Look at this food image carefully.
-1. First check if this image actually contains food
-2. If NO food is visible or image is unclear, return this exact JSON:
-   {"error": "not_food"} or {"error": "unclear"}
-3. If food IS visible:
-   - Identify the exact food name and brand if visible
-   - Search for accurate nutrition information online
-   - Estimate the portion size in grams based on what you see
-Respond ONLY in valid JSON with exactly these keys for food:
-{
-  "food_name": "",
-  "estimated_grams": 0,
-  "calories_per_serving": 0,
-  "protein_per_serving": 0,
-  "carbs_per_serving": 0,
-  "fat_per_serving": 0
-}
-Or for errors:
-{"error": "not_food"} or {"error": "unclear"}
-No extra text, no markdown, just the JSON.'''
+                    1. First check if this image actually contains food
+                    2. If NO food is visible or image is unclear, return this exact JSON:
+                       {"error": "not_food"} or {"error": "unclear"}
+                    3. If food IS visible:
+                       - Identify the exact food name and brand if visible
+                       - Search for accurate nutrition information online
+                       - Estimate the portion size in grams based on what you see
+                    Respond ONLY in valid JSON with exactly these keys for food:
+                    {
+                      "food_name": "",
+                      "estimated_grams": 0,
+                      "calories_per_serving": 0,
+                      "protein_per_serving": 0,
+                      "carbs_per_serving": 0,
+                      "fat_per_serving": 0
+                    }
+                    Or for errors:
+                    {"error": "not_food"} or {"error": "unclear"}
+                    No extra text, no markdown, just the JSON.'''
                 }
               ]
             }
