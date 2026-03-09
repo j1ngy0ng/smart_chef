@@ -11,6 +11,7 @@ import '../../controllers/add_meal_controller.dart';
 import '../../models/nutrition_model.dart';
 import '../../models/food_item_model.dart';
 import '../../theme/colors.dart';
+import 'dart:io';
 
 typedef _C = C;
 
@@ -576,9 +577,15 @@ class _AddMealScreenState extends State<AddMealScreen>
                     color: _C.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(13),
                   ),
-                  child: Center(
+                  clipBehavior: Clip.hardEdge,
+                  child: item.imagePath != null && File(item.imagePath!).existsSync()
+                      ? Image.file(
+                    File(item.imagePath!),
+                    fit: BoxFit.cover,
+                  )
+                      : Center(
                     child: Text(
-                      _foodEmoji(item.foodName.value),
+                      _foodEmoji(item.food.name),
                       style: const TextStyle(fontSize: 22),
                     ),
                   ),

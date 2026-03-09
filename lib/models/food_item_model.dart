@@ -16,6 +16,7 @@ class FoodItem {
   final double fatPer100g;
   final String? barcode;
   final String? imageUrl;
+  final String? imagePath;
 
   FoodItem({
     required this.id,
@@ -27,6 +28,7 @@ class FoodItem {
     required this.fatPer100g,
     this.barcode,
     this.imageUrl,
+    this.imagePath,
   });
 
   factory FoodItem.fromMap(Map<String, dynamic> map) {
@@ -82,12 +84,14 @@ class MealCartItem {
   final RxDouble servingGrams;
   final RxBool isEditing;
   final RxString foodName;
+  final String? imagePath;
 
   MealCartItem({
     required this.cartId,
     required this.food,
     double initialServing = 100,
     bool initialEditing = false,
+    this.imagePath,
   })  : servingGrams = initialServing.obs,
         isEditing = initialEditing.obs,
         foodName = food.name.obs;
@@ -113,6 +117,7 @@ class MealCartItem {
       fat: fat,
       servingSize: servingGrams.value,
       barcode: food.barcode,
+      imagePath: imagePath,
       loggedAt: DateTime.now(),
     );
   }

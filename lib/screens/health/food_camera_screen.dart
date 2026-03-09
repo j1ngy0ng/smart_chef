@@ -8,6 +8,8 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/gemini_service.dart';
 import '../../theme/colors.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 typedef _C = C;
 
@@ -21,6 +23,19 @@ class FoodCameraScreen extends StatefulWidget {
 class _FoodCameraScreenState extends State<FoodCameraScreen> {
   bool _isAnalyzing = false;
   String _statusText = 'Take a photo of your food';
+
+  Future<String?> _saveImageLocally(Uint8List bytes) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final fileName = 'food_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      return file.path;
+    } catch (e) {
+      print('Image save error: $e');
+      return null;
+    }
+  }
 
   Future<void> _captureAndAnalyze() async {
     final picker = ImagePicker();
@@ -38,6 +53,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
 
     try {
       final Uint8List bytes = await photo.readAsBytes();
+      final String? savedPath = await _saveImageLocally(bytes);
       final Map<String, dynamic>? result =
       await GeminiService.analyzeFoodImage(bytes);
 
@@ -93,6 +109,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
 
       // Success — return food data to add_meal_controller
       if (result.containsKey('food_name')) {
+        result['image_path'] = savedPath;
         Get.back(result: result);
       } else {
         setState(() {
@@ -126,7 +143,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
   Future<void> _pickFromGallery() async {
     final picker = ImagePicker();
     final photo = await picker.pickImage(
-      source: ImageSource.gallery,  // ← only change from camera
+      source: ImageSource.gallery,
       imageQuality: 85,
     );
 
@@ -139,6 +156,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
 
     try {
       final Uint8List bytes = await photo.readAsBytes();
+      final String? savedPath = await _saveImageLocally(bytes);
       final Map<String, dynamic>? result =
       await GeminiService.analyzeFoodImage(bytes);
 
@@ -181,6 +199,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
       }
 
       if (result.containsKey('food_name')) {
+        result['image_path'] = savedPath;
         Get.back(result: result);
       } else {
         setState(() {

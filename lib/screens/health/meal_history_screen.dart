@@ -3,6 +3,8 @@
 // Reads from nutrition_logs table in Supabase.
 // Supports swipe-to-delete and date navigation.
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -623,14 +625,26 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               child: Row(
                 children: [
-                  Container(
-                    width: 42, height: 42,
-                    decoration: BoxDecoration(
-                      color: mealColor.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(12),
+                  GestureDetector(
+                    onTap: () => _showImageDialog(log),
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: mealColor.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: log.imagePath != null && File(log.imagePath!).existsSync()
+                          ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(log.imagePath!),
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                          : Icon(Icons.restaurant_rounded,
+                          color: mealColor.withOpacity(0.7), size: 20),
                     ),
-                    child: Icon(Icons.restaurant_rounded,
-                        color: mealColor.withOpacity(0.7), size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -941,6 +955,135 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
       ),
     ) ??
         false;
+  }
+
+  void _showImageDialog(NutritionLog log) {
+    final hasImage = log.imagePath != null && File(log.imagePath!).existsSync();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Image or placeholder
+              hasImage
+                  ? ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20)),
+                child: Image.file(
+                  File(log.imagePath!),
+                  width: double.infinity,
+                  height: 260,
+                  fit: BoxFit.cover,
+                ),
+              )
+                  : Container(
+                width: double.infinity,
+                height: 180,
+                decoration: BoxDecoration(
+                  color: _C.bg,
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20)),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.no_photography_rounded,
+                        color: _C.text3, size: 48),
+                    const SizedBox(height: 12),
+                    const Text('No image captured',
+                        style: TextStyle(
+                            color: _C.text3,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+
+              // Food info
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(log.foodName,
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: _C.text1)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${log.servingSize.toInt()}g  ·  ${log.calories.toInt()} kcal',
+                      style: const TextStyle(
+                          fontSize: 13, color: _C.text2),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _dialogMacro('Protein', '${log.protein.toInt()}g', _C.protein),
+                        _dialogMacro('Carbs', '${log.carbs.toInt()}g', _C.carbs),
+                        _dialogMacro('Fat', '${log.fat.toInt()}g', _C.fat),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: double.infinity,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: _C.primary,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Text('Close',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dialogMacro(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Text(value,
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: color)),
+            Text(label,
+                style: const TextStyle(fontSize: 11, color: _C.text3)),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
