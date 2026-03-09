@@ -54,4 +54,21 @@ class PostModel {
       ),
     );
   }
+
+  factory PostModel.fromLocalSql(Map<String, dynamic> map) {
+    return PostModel(
+      id: map['id'],
+      title: map['title'],
+      content: map['content'],
+      imageUrl: map['image_url'],
+      // We reconstruct the user object from the flattened SQL columns
+      user: UserModel(
+        id: map['user_id'],
+        username: map['author_name'],
+        avatarUrl: map['author_avatar'],
+      ),
+      likeCount: 0, // Simplified for offline
+      isLiked: false,
+    );
+  }
 }

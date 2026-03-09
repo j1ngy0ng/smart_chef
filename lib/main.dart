@@ -3,6 +3,7 @@ import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
 import 'package:smart_chef/screens/blog/blog_feed_screen.dart';
 import 'package:smart_chef/screens/dashboard_screen.dart';
+import 'package:smart_chef/services/local_db_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:smart_chef/screens/login/login_screen.dart';
 import 'package:smart_chef/screens/health/nutrition_dashboard_screen.dart';
@@ -15,7 +16,20 @@ Future<void> main() async {
     anonKey: 'sb_publishable_EDvi6-MQTfeM9NWQvVZDXg_kIhcDpCu',
   );
 
-  runApp(const SmartChefApp());
+  // Initialize SQLite
+  await LocalDbService().database;
+
+  // Check if a user session is already saved on the phone
+  final session = Supabase.instance.client.auth.currentSession;
+
+  runApp(GetMaterialApp(
+    // If session exists, skip login and go to the main app layout
+    initialRoute: session != null ? '/home' : '/login',
+    getPages: [
+      GetPage(name: '/login', page: () => LoginScreen()),
+      GetPage(name: '/home', page: () => DashboardScreen()),
+    ],
+  ));
 }
 
 final supabase = Supabase.instance.client;

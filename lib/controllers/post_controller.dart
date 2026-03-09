@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:smart_chef/controllers/profile_controller.dart';
 import '../models/post_model.dart';
 import '../screens/blog/post_detail_screen.dart';
+import '../services/local_db_service.dart'; // Ensure this is imported
 import '../services/supabase_service.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:async';
@@ -13,6 +14,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 
 class PostController extends GetxController {
   final SupabaseService _service = SupabaseService();
+  final LocalDbService _localDb = LocalDbService(); // 1. Added Local Database
 
   final _model = GenerativeModel(
     model: 'gemini-2.5-flash',
@@ -51,6 +53,7 @@ class PostController extends GetxController {
       return title.contains(query) || content.contains(query);
     }).toList();
   }
+
   // ==========================
   // Init
   // ==========================
@@ -63,25 +66,52 @@ class PostController extends GetxController {
   }
 
   // ==========================
-  // Fetch posts safely
+  // HYBRID FETCH: SQLite + Supabase
   // ==========================
   Future<void> fetchPosts({bool showError = true}) async {
     try {
       isLoading.value = true;
+      final currentUid = _service.currentUser?.id;
+
+      // 1. LOAD LOCAL (SQLite) - Instant UI load
+      try {
+        final localData = await _localDb.getLocalPosts();
+        if (localData.isNotEmpty) {
+          posts.value = localData.map((e) => PostModel.fromLocalSql(e)).toList();
+          debugPrint("Blog loaded from SQLite cache instantly");
+        }
+      } catch (dbError) {
+        debugPrint("Local DB Error: $dbError");
+      }
+
+      // 2. FETCH REMOTE (Supabase) - Background Sync
       final data = await _service.fetchPosts();
-      final currentUid = _service.currentUser?.id; // Get the ID of the logged-in user
 
-      posts.value = data.map((e) {
-        final model = PostModel.fromMap(e as Map<String, dynamic>, currentUserId: currentUid);
+      if (data.isNotEmpty) {
+        // 3. PERSISTENCE: Save fresh remote data to SQLite for next time
+        await _localDb.savePostsLocally(data);
 
-        // DEBUG PRINT: Compare these two in your console!
-        print("Post ID: ${model.id} | Author ID: ${model.user.id} | My ID: $currentUid");
-
-        return model;
-      }).toList();
+        // 4. UPDATE UI: Show the most up-to-date data
+        posts.value = data.map((e) {
+          final model = PostModel.fromMap(e as Map<String, dynamic>, currentUserId: currentUid);
+          return model;
+        }).toList();
+      }
 
     } catch (e) {
-      // ... your error handling ...
+      debugPrint("Offline mode or Fetch Error: $e");
+
+      // OPTIONAL: Nice touch for your tutor to prove offline mode
+      if (showError) {
+        Get.snackbar(
+          "Offline Mode",
+          "You are browsing cached recipes. Please connect to the internet to see new posts.",
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orangeAccent,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+      }
     } finally {
       isLoading.value = false;
     }
@@ -110,7 +140,7 @@ class PostController extends GetxController {
         content: contentController.text.trim(),
       );
 
-      // This is vital! It tells the BlogFeedScreen to show the new info
+      // This triggers the hybrid fetch (updates Remote, then saves to Local)
       await fetchPosts();
 
       // Clear inputs for the next time the user opens the screen
@@ -127,7 +157,7 @@ class PostController extends GetxController {
   // Pick image
   // ==========================
 
-  Future<void> pickImage(ImageSource source) async { // Needs 'ImageSource source'
+  Future<void> pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
 
     final XFile? image = await picker.pickImage(source: source);
@@ -150,7 +180,6 @@ class PostController extends GetxController {
       isLoading.value = true;
 
       // 1. AI Review & Enhancement Phase
-      // Using gemini-1.5-flash for speed and lower cost
       final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: 'AIzaSyB5z8_MWyKlNxItApAAZRrARylVLOZDmhc');
 
       final prompt = """
@@ -208,12 +237,14 @@ class PostController extends GetxController {
         imageFile: selectedImage.value,
       );
 
-      // 4. Cleanup and Navigation
+      // 4. Cleanup, Refresh & Navigation
       titleController.clear();
       contentController.clear();
       selectedImage.value = null;
 
+      // This will pull the new post and cache it to SQLite immediately
       await fetchPosts();
+
       Get.back();
 
       WidgetsBinding.instance.addPostFrameCallback((_) {

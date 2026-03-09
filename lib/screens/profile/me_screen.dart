@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -129,8 +130,9 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
                 Obx(() => CircleAvatar(
                   radius: 45,
                   backgroundColor: Colors.grey[100],
+                  // THIS IS THE MAGIC LINE FOR OFFLINE AVATARS
                   backgroundImage: profileController.avatarUrl.value.isNotEmpty
-                      ? NetworkImage(profileController.avatarUrl.value)
+                      ? CachedNetworkImageProvider(profileController.avatarUrl.value)
                       : null,
                   child: profileController.avatarUrl.value.isEmpty || profileController.isUploading.value
                       ? profileController.isUploading.value
@@ -237,7 +239,14 @@ class _MeScreenState extends State<MeScreen> with SingleTickerProviderStateMixin
           child: Container(
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: Colors.grey[100]),
             clipBehavior: Clip.antiAlias,
-            child: Image.network(post.imageUrl ?? '', fit: BoxFit.cover),
+            child: CachedNetworkImage(
+              imageUrl: post.imageUrl ?? "",
+              fit: BoxFit.cover,
+              placeholder: (context, url) => const Center(
+                child: CircularProgressIndicator(), // Shows a spinner while downloading the first time
+              ),
+              errorWidget: (context, url, error) => const Icon(Icons.image_not_supported), // Fallback if it fails
+            ),
           ),
         );
       },

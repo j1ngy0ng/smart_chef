@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/post_controller.dart';
@@ -145,11 +146,22 @@ class _PostDetailScreenState extends State<PostDetailScreen> with SingleTickerPr
                         children: [
                           Hero(
                             tag: widget.post.id,
-                            child: Image.network(
-                              widget.post.imageUrl!,
+                            child: CachedNetworkImage(
+                              imageUrl: widget.post.imageUrl!,
                               width: double.infinity,
                               height: 450,
                               fit: BoxFit.cover,
+                              // A nice green spinner while the big image loads the first time
+                              placeholder: (context, url) => const SizedBox(
+                                height: 450,
+                                child: Center(
+                                  child: CircularProgressIndicator(color: Color(0xFF00A676)),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => const SizedBox(
+                                height: 450,
+                                child: Center(child: Icon(Icons.image_not_supported, size: 50)),
+                              ),
                             ),
                           ),
                           if (_showHeartOverlay)
@@ -176,7 +188,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> with SingleTickerPr
                           children: [
                             CircleAvatar(
                               radius: 18,
-                              backgroundImage: widget.post.user.avatarUrl != null ? NetworkImage(widget.post.user.avatarUrl!) : null,
+                              backgroundImage: widget.post.user.avatarUrl != null
+                                  ? CachedNetworkImageProvider(widget.post.user.avatarUrl!)
+                                  : null,
+                              child: widget.post.user.avatarUrl == null ? const Icon(Icons.person, size: 20, color: Colors.grey) : null,
                             ),
                             const SizedBox(width: 10),
                             Text(widget.post.user.username, style: const TextStyle(fontWeight: FontWeight.w600)),

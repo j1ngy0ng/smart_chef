@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -147,7 +148,14 @@ class BlogFeedScreen extends StatelessWidget {
               child: post.imageUrl != null
                   ? Hero(
                 tag: post.id, // Added Hero tag for smooth transition
-                child: Image.network(post.imageUrl!, fit: BoxFit.cover),
+                child: CachedNetworkImage(
+                  imageUrl: post.imageUrl ?? '',
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(), // Shows a spinner while downloading the first time
+                  ),
+                  errorWidget: (context, url, error) => const Icon(Icons.image_not_supported), // Fallback if it fails
+                ),
               )
                   : Container(height: 100, color: Colors.grey[200], child: const Icon(Icons.image)),
             ),

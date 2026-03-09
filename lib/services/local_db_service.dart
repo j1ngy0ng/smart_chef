@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/meal_model.dart';
@@ -16,33 +18,83 @@ class LocalDbService {
 
     return await openDatabase(
       path,
-      version: 1, // Reset to version 1
+      version: 2, // Incremented version to trigger onUpgrade for the new table
       onCreate: (db, version) async {
-        // Single source of truth for your tables
         await db.execute('''
-        CREATE TABLE meals(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          title TEXT,
-          type TEXT,
-          kcal INTEGER,
-          imageUrl TEXT,
-          ingredients TEXT,
-          steps TEXT,
-          date TEXT,
-          isSocialPost INTEGER DEFAULT 0 
-        )
-      ''');
+          CREATE TABLE meals(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            type TEXT,
+            kcal INTEGER,
+            imageUrl TEXT,
+            ingredients TEXT,
+            steps TEXT,
+            date TEXT,
+            isSocialPost INTEGER DEFAULT 0 
+          )
+        ''');
 
         await db.execute('''
-        CREATE TABLE grocery_items(
-          name TEXT PRIMARY KEY,
-          price REAL,
-          category TEXT DEFAULT 'General'
-        )
-      ''');
+          CREATE TABLE grocery_items(
+            name TEXT PRIMARY KEY,
+            price REAL,
+            category TEXT DEFAULT 'General'
+          )
+        ''');
+
+        // NEW: Profile table for Hybrid Data Management
+        await db.execute('''
+          CREATE TABLE user_profile(
+            id TEXT PRIMARY KEY,
+            username TEXT,
+            avatar_url TEXT,
+            last_synced TEXT
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE cached_posts(
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            title TEXT,
+            content TEXT,
+            image_url TEXT,
+            author_name TEXT,
+            author_avatar TEXT,
+            created_at TEXT
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE cached_liked_posts(
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            title TEXT,
+            content TEXT,
+            image_url TEXT,
+            author_name TEXT,
+            author_avatar TEXT,
+            created_at TEXT
+          )
+        ''');
+
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE user_profile(
+              id TEXT PRIMARY KEY,
+              username TEXT,
+              avatar_url TEXT,
+              last_synced TEXT
+            )
+          ''');
+        }
       },
     );
   }
+
+  // --- EXISTING MEAL METHODS ---
 
   Future<int> insertMeal(Meal meal) async {
     final db = await database;
@@ -55,7 +107,7 @@ class LocalDbService {
       'meals',
       meal.toMap(),
       where: 'id = ?',
-      whereArgs: [meal.id], // This targets the specific meal we just fixed
+      whereArgs: [meal.id],
     );
   }
 
@@ -72,7 +124,7 @@ class LocalDbService {
         'ingredients': ingredients,
         'steps': steps,
         'kcal': kcal,
-        'isSocialPost': 0, // 0 = false in SQLite. This hides the "Fix" button for all.
+        'isSocialPost': 0,
       },
       where: 'title = ?',
       whereArgs: [title],
@@ -91,14 +143,10 @@ class LocalDbService {
 
   Future<void> deleteMeal(int id) async {
     final db = await database;
-    await db.delete(
-      'meals',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('meals', where: 'id = ?', whereArgs: [id]);
   }
 
-  // --- NEW GROCERY METHODS ---
+  // --- EXISTING GROCERY METHODS ---
 
   Future<int> upsertGroceryItem(String name, double price, String category) async {
     final db = await database;
@@ -118,4 +166,96 @@ class LocalDbService {
     final db = await database;
     return await db.delete('grocery_items', where: 'name = ?', whereArgs: [name]);
   }
+
+  // --- NEW PROFILE METHODS (For Hybrid/Local Management) ---
+
+  Future<int> saveLocalProfile(Map<String, dynamic> profileData) async {
+    final db = await database;
+    // Add a timestamp to know when we last synced with Supabase
+    profileData['last_synced'] = DateTime.now().toIso8601String();
+
+    return await db.insert(
+      'user_profile',
+      profileData,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<Map<String, dynamic>?> getLocalProfile(String userId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> results = await db.query(
+      'user_profile',
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<void> clearLocalProfile() async {
+    final db = await database;
+    await db.delete('user_profile');
+  }
+
+  Future<void> savePostsLocally(List<dynamic> posts) async {
+    final db = await database;
+    Batch batch = db.batch(); // Use batch for faster multiple inserts
+
+    for (var post in posts) {
+      batch.insert(
+        'cached_posts',
+        {
+          'id': post['id'].toString(),
+          'user_id': post['user_id'],
+          'title': post['title'],
+          'content': post['content'],
+          'image_url': post['image_url'],
+          'author_name': post['profiles']?['username'] ?? 'Unknown',
+          'author_avatar': post['profiles']?['avatar_url'] ?? '',
+          'created_at': post['created_at'],
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<Map<String, dynamic>>> getLocalPosts() async {
+    final db = await database;
+    return await db.query('cached_posts', orderBy: 'created_at DESC');
+  }
+
+  Future<void> saveLikedPostsLocally(List<dynamic> likedData) async {
+    final db = await database;
+    Batch batch = db.batch();
+
+    // Clear out the old cached likes to ensure we don't show un-liked posts
+    await db.delete('cached_liked_posts');
+
+    for (var item in likedData) {
+      final post = item['posts']; // Extract the actual post data
+      if (post != null) {
+        batch.insert(
+          'cached_liked_posts',
+          {
+            'id': post['id'].toString(),
+            'user_id': post['user_id'],
+            'title': post['title'],
+            'content': post['content'],
+            'image_url': post['image_url'],
+            'author_name': post['profiles']?['username'] ?? 'Unknown',
+            'author_avatar': post['profiles']?['avatar_url'] ?? '',
+            'created_at': post['created_at'],
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<Map<String, dynamic>>> getLocalLikedPosts() async {
+    final db = await database;
+    return await db.query('cached_liked_posts', orderBy: 'created_at DESC');
+  }
+
 }
