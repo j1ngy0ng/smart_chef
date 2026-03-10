@@ -295,4 +295,78 @@ class SupabaseService {
 
     return response as List<dynamic>;
   }
+
+  // ==========================
+  // FAVORITE RECIPES SECTION
+  // ==========================
+  Stream<List<Map<String, dynamic>>> favoritesStream() {
+
+    final user = currentUser;
+
+    return _client
+        .from('favorite_recipes')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', user!.id)
+        .order('created_at');
+  }
+
+  Future<bool> isFavorite(String recipeId) async {
+
+    final user = currentUser;
+    if (user == null) return false;
+
+    final response = await _client
+        .from('favorite_recipes')
+        .select()
+        .eq('recipe_id', recipeId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    return response != null;
+  }
+
+  Future<void> addFavorite({
+    required String recipeId,
+    required String title,
+    required String image,
+    required String kcal,
+    required String duration,
+  }) async {
+
+    final user = currentUser;
+    if (user == null) return;
+
+    await _client.from('favorite_recipes').insert({
+      'user_id': user.id,
+      'recipe_id': recipeId,
+      'title': title,
+      'image': image,
+      'kcal': kcal,
+      'duration': duration,
+    });
+  }
+
+  Future<void> removeFavorite(String recipeId) async {
+
+    final user = currentUser;
+    if (user == null) return;
+
+    await _client
+        .from('favorite_recipes')
+        .delete()
+        .eq('recipe_id', recipeId)
+        .eq('user_id', user.id);
+  }
+
+  Future<List<dynamic>> fetchFavorites() async {
+
+    final user = currentUser;
+    if (user == null) return [];
+
+    return await _client
+        .from('favorite_recipes')
+        .select()
+        .eq('user_id', user.id)
+        .order('created_at', ascending: false);
+  }
 }

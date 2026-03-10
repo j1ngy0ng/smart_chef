@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../../services/gemini_service.dart';
+import '../../services/local_db_service.dart';
+import '../../services/supabase_service.dart';
 
 const Color kPrimaryGreen = Color(0xFF4CAF50);
 const Color kAccentOrange = Color(0xFFFF9800);
@@ -117,7 +119,11 @@ class _RecipeResultPageState extends State<RecipeResultPage> {
                       ? Image.network(recipe["image"]!, height: 200, width: double.infinity, fit: BoxFit.cover)
                       : Container(height: 150, width: double.infinity, color: kPrimaryGreen.withOpacity(0.1), child: const Icon(Icons.restaurant, color: kPrimaryGreen, size: 40)),
                 ),
-                const Positioned(top: 12, right: 12, child: AnimatedHeart()),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: AnimatedHeart(recipe: recipe),
+                ),
               ],
             ),
             Padding(
@@ -261,20 +267,42 @@ class RecipeDetailPage extends StatelessWidget {
 }
 
 class AnimatedHeart extends StatefulWidget {
-  const AnimatedHeart({Key? key}) : super(key: key);
+  final Map<String, String> recipe;
+
+  const AnimatedHeart({Key? key, required this.recipe}) : super(key: key);
 
   @override
   State<AnimatedHeart> createState() => _AnimatedHeartState();
 }
 
 class _AnimatedHeartState extends State<AnimatedHeart> with SingleTickerProviderStateMixin {
+  final SupabaseService supabase = SupabaseService();
+  final LocalDbService db = LocalDbService();
   bool isFavorite = false;
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
+  void loadFavorite() async {
+
+    bool fav = false;
+
+    try {
+      // ⭐ Check Supabase first
+      fav = await supabase.isFavorite(widget.recipe["title"]!);
+    } catch (e) {
+      // If internet fails → check SQLite
+      fav = await db.isFavorite(widget.recipe["title"]!);
+    }
+
+    setState(() {
+      isFavorite = fav;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    loadFavorite();
     _controller = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -291,10 +319,50 @@ class _AnimatedHeartState extends State<AnimatedHeart> with SingleTickerProvider
     super.dispose();
   }
 
-  void _toggleFavorite() {
-    setState(() => isFavorite = !isFavorite);
+  void _toggleFavorite() async {
+
+    setState(() {
+      isFavorite = !isFavorite;
+    });
+
     if (isFavorite) {
-      _controller.forward(from: 0.0);
+
+      _controller.forward(from: 0);
+
+      try {
+
+        // ⭐ Save to Supabase first
+        await supabase.addFavorite(
+          recipeId: widget.recipe["title"] ?? "",
+          title: widget.recipe["title"] ?? "",
+          image: widget.recipe["image"] ?? "",
+          kcal: widget.recipe["kcal"] ?? "",
+          duration: widget.recipe["duration"] ?? "",
+        );
+
+        // ⭐ Also cache locally
+        await db.saveFavorite(widget.recipe);
+
+      } catch (e) {
+
+        // If Supabase fails → fallback to local
+        await db.saveFavorite(widget.recipe);
+
+      }
+
+    } else {
+
+      try {
+
+        await supabase.removeFavorite(widget.recipe["title"] ?? "");
+
+        await db.removeFavorite(widget.recipe["title"]!);
+
+      } catch (e) {
+
+        await db.removeFavorite(widget.recipe["title"]!);
+
+      }
     }
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'waste_screen.dart';
+import 'favorite_recipes_page.dart';
+import '../waste/favorite_recipes_page.dart';
 
 // --- Design System Constants ---
 const Color kPrimaryGreen = Color(0xFF4CAF50);
@@ -26,6 +28,20 @@ class IngredientChoicePage extends StatelessWidget {
             fontSize: 22,
           ),
         ),
+
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.favorite, color: Colors.redAccent),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const FavoriteRecipesPage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Padding(

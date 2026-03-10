@@ -78,6 +78,18 @@ class LocalDbService {
           )
         ''');
 
+        await db.execute('''
+          CREATE TABLE favorite_recipes(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT UNIQUE,
+            ingredients TEXT,
+            steps TEXT,
+            image TEXT,
+            kcal TEXT,
+            duration TEXT
+          )
+          ''');
+
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -87,6 +99,20 @@ class LocalDbService {
               username TEXT,
               avatar_url TEXT,
               last_synced TEXT
+            )
+          ''');
+        }
+
+        if (oldVersion < 3) {
+          await db.execute('''
+            CREATE TABLE favorite_recipes(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT UNIQUE,
+              ingredients TEXT,
+              steps TEXT,
+              image TEXT,
+              kcal TEXT,
+              duration TEXT
             )
           ''');
         }
@@ -144,6 +170,52 @@ class LocalDbService {
   Future<void> deleteMeal(int id) async {
     final db = await database;
     await db.delete('meals', where: 'id = ?', whereArgs: [id]);
+  }
+
+  ///////////Leftover Recipe Methods///////////
+  // Save recipe
+  Future<void> saveFavorite(Map<String, String> recipe) async {
+    final db = await database;
+
+    await db.insert(
+      'favorite_recipes',
+      recipe,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // Remove recipe
+  Future<void> removeFavorite(String title) async {
+    final db = await database;
+
+    await db.delete(
+      'favorite_recipes',
+      where: 'title = ?',
+      whereArgs: [title],
+    );
+  }
+
+  // Get favorites
+  Future<List<Map<String, dynamic>>> getFavorites() async {
+    final db = await database;
+
+    return await db.query(
+      'favorite_recipes',
+      orderBy: 'id DESC',
+    );
+  }
+
+  // Check favorite
+  Future<bool> isFavorite(String title) async {
+    final db = await database;
+
+    final result = await db.query(
+      'favorite_recipes',
+      where: 'title = ?',
+      whereArgs: [title],
+    );
+
+    return result.isNotEmpty;
   }
 
   // --- EXISTING GROCERY METHODS ---
