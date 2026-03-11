@@ -315,13 +315,8 @@ class PlannerController extends GetxController {
       debugPrint("MealDB failed: $e");
     }
 
-    // 2. BACKUP: Pexels (Better than Pixabay/Unsplash Source)
-    // We use the Pexels "Search" URL structure.
-    // Note: Pexels is highly curated for "Artistic Food" shots.
+    // 2. BACKUP: Pexels
     return "https://images.pexels.com/photos/search/$cleanQuery/?orientation=landscape";
-
-    // 3. ULTIMATE FALLBACK: LoremFlickr (Reliable placeholder)
-    // return "https://loremflickr.com/800/600/$cleanQuery,dish?lock=$index";
   }
 
   // This computed list handles both search and category filtering
@@ -347,7 +342,15 @@ class PlannerController extends GetxController {
     fetchMealsForDate(selected);
   }
 
-  // Inside PlannerController.dart
+  Future<void> initCloudStatus(String recipeId) async {
+    // Reset state to false immediately to prevent "flickering"
+    // or showing the previous meal's state
+    isCloudSaved.value = false;
+
+    // Now check the real status
+    isCloudSaved.value = await _supabaseService.isMealSavedInCloud(recipeId);
+  }
+
   Future<void> saveMealToCloud(Meal meal) async {
     try {
       isLoading.value = true;
@@ -423,4 +426,5 @@ class PlannerController extends GetxController {
     // Use your existing local DB insertion method
     await addMeal(meal);
     Get.snackbar("Added", "${meal.title} added to your plan!");
-  }}
+  }
+}

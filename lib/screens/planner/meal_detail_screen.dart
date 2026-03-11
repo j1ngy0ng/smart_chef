@@ -14,6 +14,10 @@ class MealDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<PlannerController>();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.initCloudStatus(meal.id.toString());
+    });
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Obx(() {

@@ -31,7 +31,10 @@ class SmartPlannerScreen extends GetView<PlannerController> {
         spacing: 12,
         children: [
           SpeedDialChild(
-            child: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+            child: const Icon(
+              Icons.shopping_cart_outlined,
+              color: Colors.white,
+            ),
             backgroundColor: const Color(0xFF00A676),
             label: 'View Grocery List',
             onTap: () => Get.to(() => GroceryListScreen()),
@@ -46,7 +49,8 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             child: const Icon(Icons.search, color: Colors.white),
             backgroundColor: Color(0xFF00A676),
             label: 'Community Favorites',
-            onTap: () => _showAddOptionSheet(context, controller, postController),
+            onTap: () =>
+                _showAddOptionSheet(context, controller, postController),
           ),
           SpeedDialChild(
             child: const Icon(Icons.bookmark_outline, color: Colors.white),
@@ -70,18 +74,29 @@ class SmartPlannerScreen extends GetView<PlannerController> {
 
           Expanded(
             child: Obx(() {
-              if (controller.isLoading.value && controller.plannedMeals.isEmpty) {
-                return const Center(child: CircularProgressIndicator(color: Color(0xFF00A676)));
+              if (controller.isLoading.value &&
+                  controller.plannedMeals.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF00A676)),
+                );
               }
               if (controller.plannedMeals.isEmpty) {
-                return const Center(child: Text("No meals planned for today", style: TextStyle(color: Colors.grey)));
+                return const Center(
+                  child: Text(
+                    "No meals planned for today",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                );
               }
 
               return ListView.builder(
                 padding: const EdgeInsets.only(top: 10, bottom: 20),
                 itemCount: controller.plannedMeals.length,
                 itemBuilder: (context, index) {
-                  return _buildMealCard(controller.plannedMeals[index], controller);
+                  return _buildMealCard(
+                    controller.plannedMeals[index],
+                    controller,
+                  );
                 },
               );
             }),
@@ -106,10 +121,12 @@ class SmartPlannerScreen extends GetView<PlannerController> {
               controller.focusedDay.value.subtract(const Duration(days: 7)),
             ),
           ),
-          Obx(() => Text(
-            DateFormat('MMMM yyyy').format(controller.focusedDay.value),
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          )),
+          Obx(
+            () => Text(
+              DateFormat('MMMM yyyy').format(controller.focusedDay.value),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.chevron_right, size: 30),
             onPressed: () => controller.updateSelectedDay(
@@ -123,35 +140,49 @@ class SmartPlannerScreen extends GetView<PlannerController> {
   }
 
   Widget _buildCalendar(PlannerController controller) {
-    return Obx(() => TableCalendar(
-      firstDay: DateTime.utc(2024, 1, 1),
-      lastDay: DateTime.utc(2030, 12, 31),
-      focusedDay: controller.focusedDay.value,
-      headerVisible: false,
-      calendarFormat: CalendarFormat.week,
-      selectedDayPredicate: (day) => isSameDay(controller.selectedDay.value, day),
-      onDaySelected: controller.updateSelectedDay,
-      calendarStyle: const CalendarStyle(
-        selectedDecoration: BoxDecoration(color: Color(0xFF00A676), shape: BoxShape.circle),
-        todayDecoration: BoxDecoration(color: Color(0x8000A676), shape: BoxShape.circle),
+    return Obx(
+      () => TableCalendar(
+        firstDay: DateTime.utc(2024, 1, 1),
+        lastDay: DateTime.utc(2030, 12, 31),
+        focusedDay: controller.focusedDay.value,
+        headerVisible: false,
+        calendarFormat: CalendarFormat.week,
+        selectedDayPredicate: (day) =>
+            isSameDay(controller.selectedDay.value, day),
+        onDaySelected: controller.updateSelectedDay,
+        calendarStyle: const CalendarStyle(
+          selectedDecoration: BoxDecoration(
+            color: Color(0xFF00A676),
+            shape: BoxShape.circle,
+          ),
+          todayDecoration: BoxDecoration(
+            color: Color(0x8000A676),
+            shape: BoxShape.circle,
+          ),
+        ),
       ),
-    ));
+    );
   }
 
   Widget _buildDailySummary(PlannerController controller) {
-    return Obx(() => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Row(
-        children: [
-          const Icon(Icons.bolt, color: Colors.orange, size: 20),
-          const SizedBox(width: 5),
-          Text(
-            "Total for today: ${controller.totalKcal} kcal",
-            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54),
-          ),
-        ],
+    return Obx(
+      () => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Row(
+          children: [
+            const Icon(Icons.bolt, color: Colors.orange, size: 20),
+            const SizedBox(width: 5),
+            Text(
+              "Total for today: ${controller.totalKcal} kcal",
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.black54,
+              ),
+            ),
+          ],
+        ),
       ),
-    ));
+    );
   }
 
   // --- ADD OPTION SHEET (Search + Smart Gen + Meal Picker) ---
@@ -179,37 +210,66 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                 Center(
                   child: Container(
                     margin: const EdgeInsets.only(top: 12, bottom: 20),
-                    width: 40, height: 5,
-                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 Expanded(
                   child: SingleChildScrollView(
                     controller: scrollController,
                     child: Padding(
-                      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Center(child: Text("Community Favorites", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
+                          const Center(
+                            child: Text(
+                              "Community Favorites",
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: 20),
                           TextField(
-                            onChanged: (value) => controller.searchQuery.value = value,
+                            onChanged: (value) =>
+                                controller.searchQuery.value = value,
                             decoration: InputDecoration(
                               hintText: "Search recipes...",
-                              prefixIcon: const Icon(Icons.search, color: Color(0xFF00A676)),
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: Color(0xFF00A676),
+                              ),
                               filled: true,
                               fillColor: Colors.grey[100],
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 20),
                           Obx(() {
-                            final filteredPosts = postController.posts.where((post) =>
-                                post.title.toLowerCase().contains(controller.searchQuery.value.toLowerCase())
-                            ).toList();
+                            final filteredPosts = postController.posts
+                                .where(
+                                  (post) => post.title.toLowerCase().contains(
+                                    controller.searchQuery.value.toLowerCase(),
+                                  ),
+                                )
+                                .toList();
 
-                            if (filteredPosts.isEmpty) return const Center(child: Text("No recipes found"));
+                            if (filteredPosts.isEmpty) {
+                              return const Center(
+                                child: Text("No recipes found"),
+                              );
+                            }
 
                             return ListView.builder(
                               shrinkWrap: true,
@@ -225,37 +285,82 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                                   decoration: BoxDecoration(
                                     color: Colors.grey[50],
                                     borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(color: Colors.grey.shade200),
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                    ),
                                   ),
                                   child: Row(
                                     children: [
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(10),
-                                        child: Image.network(post.imageUrl ?? "", width: 60, height: 60, fit: BoxFit.cover),
+                                        child: Image.network(
+                                          post.imageUrl ?? "",
+                                          width: 60,
+                                          height: 60,
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Text(post.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                            Obx(() => DropdownButton<String>(
-                                              value: selectedType.value,
-                                              isDense: true,
-                                              underline: const SizedBox(),
-                                              icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF00A676)),
-                                              items: ['Breakfast', 'Lunch', 'Dinner'].map((type) =>
-                                                  DropdownMenuItem(value: type, child: Text(type, style: const TextStyle(fontSize: 13)))
-                                              ).toList(),
-                                              onChanged: (val) => selectedType.value = val!,
-                                            )),
+                                            Text(
+                                              post.title,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            Obx(
+                                              () => DropdownButton<String>(
+                                                value: selectedType.value,
+                                                isDense: true,
+                                                underline: const SizedBox(),
+                                                icon: const Icon(
+                                                  Icons.arrow_drop_down,
+                                                  color: Color(0xFF00A676),
+                                                ),
+                                                items:
+                                                    [
+                                                          'Breakfast',
+                                                          'Lunch',
+                                                          'Dinner',
+                                                        ]
+                                                        .map(
+                                                          (
+                                                            type,
+                                                          ) => DropdownMenuItem(
+                                                            value: type,
+                                                            child: Text(
+                                                              type,
+                                                              style:
+                                                                  const TextStyle(
+                                                                    fontSize:
+                                                                        13,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                        )
+                                                        .toList(),
+                                                onChanged: (val) =>
+                                                    selectedType.value = val!,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.add_circle, color: Color(0xFF00A676), size: 32),
+                                        icon: const Icon(
+                                          Icons.add_circle,
+                                          color: Color(0xFF00A676),
+                                          size: 32,
+                                        ),
                                         onPressed: () {
-                                          controller.addFromPost(post, selectedType.value);
+                                          controller.addFromPost(
+                                            post,
+                                            selectedType.value,
+                                          );
                                           Get.back();
                                         },
                                       ),
@@ -286,63 +391,89 @@ class SmartPlannerScreen extends GetView<PlannerController> {
       Container(
         height: MediaQuery.of(context).size.height * 0.7,
         padding: const EdgeInsets.all(25),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
         child: Column(
           children: [
-            const Text("My Saved Meals", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const Text(
+              "My Saved Meals",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 20),
             Expanded(
-              child: Obx(() => ListView.builder(
-                itemCount: controller.cloudSavedMeals.length,
-                itemBuilder: (context, index) {
-                  final meal = controller.cloudSavedMeals[index];
-                  var selectedType = "Lunch".obs;
+              child: Obx(
+                () => ListView.builder(
+                  itemCount: controller.cloudSavedMeals.length,
+                  itemBuilder: (context, index) {
+                    final meal = controller.cloudSavedMeals[index];
+                    var selectedType = "Lunch".obs;
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(meal['image_url'], width: 50, height: 50, fit: BoxFit.cover)),
-                      title: Expanded(
-                        child: Text(
-                          meal['title'],
-                          maxLines: 2, // Allow up to 2 lines
-                          overflow: TextOverflow.ellipsis, // Add '...' if it's still too long
+                    return Card(
+                      color: Colors.grey[50],
+                      margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            // 1. IMAGE
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                meal['image_url'],
+                                width: 50, height: 50, fit: BoxFit.cover,
+                                errorBuilder: (c, e, s) => Container(width: 50, height: 50, color: Colors.grey[200], child: const Icon(Icons.broken_image)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+
+                            // 2. TITLE AND DROPDOWN (Now inside Expanded)
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    meal['title'],
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Obx(() => DropdownButton<String>(
+                                    isDense: true,
+                                    value: selectedType.value,
+                                    items: ['Breakfast', 'Lunch', 'Dinner'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                                    onChanged: (val) => selectedType.value = val!,
+                                  )),
+                                ],
+                              ),
+                            ),
+
+                            // 3. ACTION BUTTONS
+                            IconButton(
+                              icon: const Icon(Icons.add_circle, color: Color(0xFF00A676), size: 30),
+                              onPressed: () {
+                                controller.addMealFromCloud(meal, selectedType.value);
+                                Get.back();
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.bookmark_remove, color: Colors.redAccent),
+                              onPressed: () async {
+                                // NOTE: Do not cast as 'Meal'. Pass the ID string.
+                                await controller.removeByRecipeId(meal['recipe_id'].toString());
+                                controller.fetchSavedMeals();
+                              },
+                            ),
+                          ],
                         ),
                       ),
-                      subtitle: Obx(() => DropdownButton<String>(
-                        value: selectedType.value,
-                        items: ['Breakfast', 'Lunch', 'Dinner'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                        onChanged: (val) => selectedType.value = val!,
-                      )),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // 1. ADD TO PLANNER BUTTON
-                          IconButton(
-                            icon: const Icon(Icons.add_circle, color: Color(0xFF00A676), size: 30),
-                            onPressed: () {
-                              // Pass the selectedType to your add method
-                              controller.addMealFromCloud(meal, selectedType.value);
-                              Get.back(); // Close the sheet
-                            },
-                          ),
-
-                          // 2. REMOVE/UNSAVE BUTTON
-                          IconButton(
-                            icon: const Icon(Icons.bookmark_remove, color: Colors.redAccent),
-                            onPressed: () async {
-                              // Assuming your toggleCloudSave takes the recipeId
-                              await controller.toggleCloudSave(meal['recipe_id'].toString() as Meal);
-                              // Refresh the list after removing
-                              controller.fetchSavedMeals();
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              )),
+                    );
+                  },
+                ),
+              ),
             ),
           ],
         ),
@@ -352,7 +483,10 @@ class SmartPlannerScreen extends GetView<PlannerController> {
 
   // --- SMART SETUP SHEET ---
 
-  void _showSmartSetupSheet(BuildContext context, PlannerController controller) {
+  void _showSmartSetupSheet(
+    BuildContext context,
+    PlannerController controller,
+  ) {
     var rangeStart = controller.selectedDay.value.obs;
     var rangeEnd = controller.selectedDay.value.obs;
     var selectedTypes = <String>['Breakfast', 'Lunch', 'Dinner'].obs;
@@ -362,84 +496,131 @@ class SmartPlannerScreen extends GetView<PlannerController> {
       isScrollControlled: true,
       Container(
         padding: const EdgeInsets.all(25),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("✨ Smart Generation Setup", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                "✨ Smart Generation Setup",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 20),
-              Obx(() => TableCalendar(
-                firstDay: DateTime.now().subtract(const Duration(days: 30)),
-                lastDay: DateTime.now().add(const Duration(days: 90)),
-                focusedDay: rangeStart.value,
-                rangeSelectionMode: RangeSelectionMode.toggledOn,
-                rangeStartDay: rangeStart.value,
-                rangeEndDay: rangeEnd.value,
-                onRangeSelected: (start, end, focused) {
-                  if (start != null) rangeStart.value = start;
-                  rangeEnd.value = end ?? start ?? DateTime.now();
-                },
-                calendarStyle: const CalendarStyle(
-                  rangeStartDecoration: BoxDecoration(color: Color(0xFF00A676), shape: BoxShape.circle),
-                  rangeEndDecoration: BoxDecoration(color: Color(0xFF00A676), shape: BoxShape.circle),
-                  rangeHighlightColor: Color(0x3300A676),
-                ),
-                headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-              )),
-              const SizedBox(height: 20),
-              const Align(alignment: Alignment.centerLeft, child: Text("Include Meals:", style: TextStyle(fontWeight: FontWeight.bold))),Obx(() => Wrap(
-                spacing: 10,
-                children: ['Breakfast', 'Lunch', 'Dinner'].map((type) {
-                  bool isSelected = selectedTypes.contains(type);
-
-                  return FilterChip(
-                    label: Text(
-                      type,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : const Color(0xFF00A676),
-                      ),
+              Obx(
+                () => TableCalendar(
+                  firstDay: DateTime.now().subtract(const Duration(days: 30)),
+                  lastDay: DateTime.now().add(const Duration(days: 90)),
+                  focusedDay: rangeStart.value,
+                  rangeSelectionMode: RangeSelectionMode.toggledOn,
+                  rangeStartDay: rangeStart.value,
+                  rangeEndDay: rangeEnd.value,
+                  onRangeSelected: (start, end, focused) {
+                    if (start != null) rangeStart.value = start;
+                    rangeEnd.value = end ?? start ?? DateTime.now();
+                  },
+                  calendarStyle: const CalendarStyle(
+                    rangeStartDecoration: BoxDecoration(
+                      color: Color(0xFF00A676),
+                      shape: BoxShape.circle,
                     ),
-                    selected: isSelected,
+                    rangeEndDecoration: BoxDecoration(
+                      color: Color(0xFF00A676),
+                      shape: BoxShape.circle,
+                    ),
+                    rangeHighlightColor: Color(0x3300A676),
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Include Meals:",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              Obx(
+                () => Wrap(
+                  spacing: 10,
+                  children: ['Breakfast', 'Lunch', 'Dinner'].map((type) {
+                    bool isSelected = selectedTypes.contains(type);
 
-                    // --- HERE IS THE COLOR CHANGE ---
-                    selectedColor: const Color(0xFF00A676),
+                    return FilterChip(
+                      label: Text(
+                        type,
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.white
+                              : const Color(0xFF00A676),
+                        ),
+                      ),
+                      selected: isSelected,
 
-                    // Optional: Set a different color when NOT selected (e.g., light grey)
-                    backgroundColor: Colors.grey.shade200,
+                      // --- HERE IS THE COLOR CHANGE ---
+                      selectedColor: const Color(0xFF00A676),
 
-                    onSelected: (val) => val ? selectedTypes.add(type) : selectedTypes.remove(type),
-                  );
-                }).toList(),
-              )),
+                      // Optional: Set a different color when NOT selected (e.g., light grey)
+                      backgroundColor: Colors.grey.shade200,
+
+                      onSelected: (val) => val
+                          ? selectedTypes.add(type)
+                          : selectedTypes.remove(type),
+                    );
+                  }).toList(),
+                ),
+              ),
               const SizedBox(height: 20),
               TextField(
                 controller: cravingController,
                 decoration: InputDecoration(
                   hintText: "Cravings? (e.g., Spicy, Italian)",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                  prefixIcon: const Icon(Icons.fastfood, color: Color(0xFF00A676)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.fastfood,
+                    color: Color(0xFF00A676),
+                  ),
                 ),
               ),
               const SizedBox(height: 30),
-              Obx(() => ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00A676),
-                  minimumSize: const Size(double.infinity, 55),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              Obx(
+                () => ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00A676),
+                    minimumSize: const Size(double.infinity, 55),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                  onPressed: controller.isLoading.value
+                      ? null
+                      : () {
+                          controller.generateSmartPlan(
+                            start: rangeStart.value,
+                            end: rangeEnd.value,
+                            mealTypes: selectedTypes,
+                            craving: cravingController.text,
+                          );
+                        },
+                  child: controller.isLoading.value
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          "GENERATE MY PLAN",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
-                onPressed: controller.isLoading.value ? null : () {
-                  controller.generateSmartPlan(
-                    start: rangeStart.value,
-                    end: rangeEnd.value,
-                    mealTypes: selectedTypes,
-                    craving: cravingController.text,
-                  );
-                },
-                child: controller.isLoading.value
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("GENERATE MY PLAN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              )),
+              ),
               const SizedBox(height: 10),
             ],
           ),
@@ -455,7 +636,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
     return Obx(() {
       // Re-fetch the meal from the list so we have the absolute latest version
       final currentMeal = controller.plannedMeals.firstWhere(
-            (m) => m.id == meal.id,
+        (m) => m.id == meal.id,
         orElse: () => meal,
       );
 
@@ -469,9 +650,10 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  spreadRadius: 2)
+                color: Colors.grey.withValues(alpha: 0.1),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
             ],
             border: Border.all(color: Colors.grey.shade200),
           ),
@@ -479,7 +661,9 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
                 child: Hero(
                   tag: 'meal-${currentMeal.id}',
                   // Use the helper you already have to handle File vs Network
@@ -494,15 +678,31 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(currentMeal.type.toUpperCase(),
-                            style: const TextStyle(color: Color(0xFF00A676), fontWeight: FontWeight.bold, fontSize: 12)),
-                        Text("${currentMeal.kcal} kcal",
-                            style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                        Text(
+                          currentMeal.type.toUpperCase(),
+                          style: const TextStyle(
+                            color: Color(0xFF00A676),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          "${currentMeal.kcal} kcal",
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(currentMeal.title,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      currentMeal.title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -514,10 +714,17 @@ class SmartPlannerScreen extends GetView<PlannerController> {
   }
 
   Widget _buildCardImage(String imageUrl) {
-    bool isLocalFile = imageUrl.startsWith('/') || imageUrl.startsWith('data/'); // Add 'data/' for some Android paths
+    bool isLocalFile =
+        imageUrl.startsWith('/') ||
+        imageUrl.startsWith('data/'); // Add 'data/' for some Android paths
 
     if (isLocalFile && File(imageUrl).existsSync()) {
-      return Image.file(File(imageUrl), height: 180, width: double.infinity, fit: BoxFit.cover);
+      return Image.file(
+        File(imageUrl),
+        height: 180,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
     }
 
     return Image.network(
@@ -525,7 +732,8 @@ class SmartPlannerScreen extends GetView<PlannerController> {
       height: 180,
       width: double.infinity,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => _buildPlaceholder(), // Use your existing placeholder
+      errorBuilder: (context, error, stackTrace) =>
+          _buildPlaceholder(), // Use your existing placeholder
     );
   }
 
@@ -535,13 +743,20 @@ class SmartPlannerScreen extends GetView<PlannerController> {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [const Color(0xFF00A676).withValues(alpha: 0.1), Colors.white],
+          colors: [
+            const Color(0xFF00A676).withValues(alpha: 0.1),
+            Colors.white,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: const Center(
-        child: Icon(Icons.restaurant_menu_rounded, size: 45, color: Color(0xFF00A676)),
+        child: Icon(
+          Icons.restaurant_menu_rounded,
+          size: 45,
+          color: Color(0xFF00A676),
+        ),
       ),
     );
   }
@@ -559,11 +774,16 @@ class SmartPlannerScreen extends GetView<PlannerController> {
           children: [
             const Icon(Icons.delete_forever, color: Colors.red, size: 50),
             const SizedBox(height: 15),
-            const Text("Delete Meal", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              "Delete Meal",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 10),
-            Text("Are you sure you want to remove '${meal.title}' from your plan? This action cannot be undone.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600])),
+            Text(
+              "Are you sure you want to remove '${meal.title}' from your plan? This action cannot be undone.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
             const SizedBox(height: 25),
             Row(
               children: [
@@ -576,7 +796,10 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                 const SizedBox(width: 15),
                 Expanded(
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
                     onPressed: () {
                       controller.deleteMeal(meal.id!);
                       Get.back();
