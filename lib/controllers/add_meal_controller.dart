@@ -161,7 +161,8 @@ class AddMealController extends GetxController {
           carbsPer100g:    (foodData['carbs_per_serving']    ?? 0).toDouble() * factor,
           fatPer100g:      (foodData['fat_per_serving']      ?? 0).toDouble() * factor,
         );
-        addToCart(food, imagePath: foodData['image_path']);
+        addToCart(food, imagePath: foodData['image_path'],
+          imageUrl: foodData['image_url'],);
 
         // Set serving size to what Gemini estimated
         final cartId = cartItems.last.cartId;
@@ -173,7 +174,7 @@ class AddMealController extends GetxController {
   }
 
   // ─── Cart Management ──────────────────────────────────────────────────────────
-  void addToCart(FoodItem food, {String? imagePath}) {
+  void addToCart(FoodItem food, {String? imagePath, String? imageUrl}) {
     final exists = cartItems.any((i) => i.food.id == food.id);
     if (exists) {
       Get.snackbar('Already Added', '${food.name} is already in this meal.',
@@ -185,7 +186,8 @@ class AddMealController extends GetxController {
       cartId: '${food.id}_${DateTime.now().millisecondsSinceEpoch}',
       food: food,
       initialServing: 100,
-      imagePath: imagePath, // ← ADD
+      imagePath: imagePath,
+      imageUrl: imageUrl,
     ));
     clearSearch();
   }

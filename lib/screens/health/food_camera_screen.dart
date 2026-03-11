@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/gemini_service.dart';
 import '../../theme/colors.dart';
 import 'dart:io';
@@ -24,17 +25,43 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
   bool _isAnalyzing = false;
   String _statusText = 'Take a photo of your food';
 
-  Future<String?> _saveImageLocally(Uint8List bytes) async {
+  Future<Map<String, String?>> _saveImageBoth(Uint8List bytes) async {
+    String? localPath;
+    String? remoteUrl;
+
+    // 1 — Save locally
     try {
       final dir = await getApplicationDocumentsDirectory();
       final fileName = 'food_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(bytes);
-      return file.path;
+      localPath = file.path;
+      print('=== IMAGE SAVED LOCALLY: $localPath ===');
     } catch (e) {
-      print('Image save error: $e');
-      return null;
+      print('=== LOCAL SAVE ERROR: $e ===');
     }
+
+    // 2 — Upload to Supabase Storage
+    try {
+      final client = Supabase.instance.client;
+      final fileName = 'food_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final storagePath = 'uploads/$fileName';
+
+      await client.storage
+          .from('food-images')
+          .uploadBinary(storagePath, bytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg'));
+
+      remoteUrl = client.storage
+          .from('food-images')
+          .getPublicUrl(storagePath);
+
+      print('=== IMAGE UPLOADED TO SUPABASE: $remoteUrl ===');
+    } catch (e) {
+      print('=== SUPABASE UPLOAD ERROR: $e ===');
+    }
+
+    return {'localPath': localPath, 'remoteUrl': remoteUrl};
   }
 
   Future<void> _captureAndAnalyze() async {
@@ -53,7 +80,9 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
 
     try {
       final Uint8List bytes = await photo.readAsBytes();
-      final String? savedPath = await _saveImageLocally(bytes);
+      final paths = await _saveImageBoth(bytes);
+      final String? savedPath = paths['localPath'];
+      final String? savedUrl = paths['remoteUrl'];
       final Map<String, dynamic>? result =
       await GeminiService.analyzeFoodImage(bytes);
 
@@ -110,6 +139,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
       // Success — return food data to add_meal_controller
       if (result.containsKey('food_name')) {
         result['image_path'] = savedPath;
+        result['image_url'] = savedUrl;
         Get.back(result: result);
       } else {
         setState(() {
@@ -156,7 +186,9 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
 
     try {
       final Uint8List bytes = await photo.readAsBytes();
-      final String? savedPath = await _saveImageLocally(bytes);
+      final paths = await _saveImageBoth(bytes);
+      final String? savedPath = paths['localPath'];
+      final String? savedUrl = paths['remoteUrl'];
       final Map<String, dynamic>? result =
       await GeminiService.analyzeFoodImage(bytes);
 
@@ -200,6 +232,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
 
       if (result.containsKey('food_name')) {
         result['image_path'] = savedPath;
+        result['image_url'] = savedUrl;
         Get.back(result: result);
       } else {
         setState(() {

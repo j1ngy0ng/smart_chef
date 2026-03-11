@@ -85,6 +85,7 @@ class MealCartItem {
   final RxBool isEditing;
   final RxString foodName;
   final String? imagePath;
+  final String? imageUrl;
 
   MealCartItem({
     required this.cartId,
@@ -92,6 +93,7 @@ class MealCartItem {
     double initialServing = 100,
     bool initialEditing = false,
     this.imagePath,
+    this.imageUrl,
   })  : servingGrams = initialServing.obs,
         isEditing = initialEditing.obs,
         foodName = food.name.obs;
@@ -119,6 +121,7 @@ class MealCartItem {
       barcode: food.barcode,
       imagePath: imagePath,
       loggedAt: DateTime.now(),
+      imageUrl: imageUrl,
     );
   }
 }

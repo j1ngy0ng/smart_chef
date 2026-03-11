@@ -12,6 +12,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/nutrition_model.dart';
 import '../../controllers/nutrition_controller.dart';
 import '../../theme/colors.dart';
+import 'dart:convert';
+import '../../services/local_db_service.dart';
 
 typedef _C = C;
 
@@ -71,8 +73,9 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
     _fadeAnim.reset();
 
     try {
-      final startOfDay =
-      DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+      // ── Try Supabase first ──
+      final startOfDay = DateTime(
+          _selectedDate.year, _selectedDate.month, _selectedDate.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
       final data = await _client
@@ -83,15 +86,51 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
           .lt('logged_at', endOfDay.toIso8601String())
           .order('logged_at', ascending: true);
 
+      final logs =
+      (data as List).map((e) => NutritionLog.fromMap(e)).toList();
+
+      for (final log in logs) {
+        print('=== LOG: ${log.foodName} | path: ${log.imagePath} | url: ${log.imageUrl} ===');
+      }
+
+      // Save fresh data to local cache
+      await _saveCacheLocally(logs);
+
       setState(() {
-        _logs = (data as List).map((e) => NutritionLog.fromMap(e)).toList();
+        _logs = logs;
         _isLoading = false;
       });
       _fadeAnim.forward();
     } catch (e) {
-      setState(() => _isLoading = false);
-      Get.snackbar('❌ Error', 'Failed to load history: $e',
-          snackPosition: SnackPosition.TOP);
+      // ── Supabase failed — load from local cache ──
+      print('=== OFFLINE: loading from cache ===');
+      final cached = await _loadCacheLocally();
+
+      setState(() {
+        _logs = cached;
+        _isLoading = false;
+      });
+      _fadeAnim.forward();
+
+      // Show offline banner only if we got cached data
+      if (cached.isNotEmpty) {
+        Get.snackbar(
+          '📵 Offline Mode',
+          'Showing cached data. Connect to sync.',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orange.shade400,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+      } else {
+        Get.snackbar(
+          '📵 No Connection',
+          'No cached data available for this date.',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.red.shade400,
+          colorText: Colors.white,
+        );
+      }
     }
   }
 
@@ -592,7 +631,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
     _servingControllers.putIfAbsent(log.id, () => TextEditingController(text: log.servingSize.toInt().toString()));
 
     return Dismissible(
-      key: Key(log.id),
+      key: Key('${log.id}_${log.foodName}_${log.loggedAt.millisecondsSinceEpoch}'),
       direction: DismissDirection.endToStart,
       confirmDismiss: (_) async {
         HapticFeedback.mediumImpact();
@@ -634,16 +673,28 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                         color: mealColor.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: log.imagePath != null && File(log.imagePath!).existsSync()
-                          ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          File(log.imagePath!),
+                      clipBehavior: Clip.hardEdge, // ← ADD THIS so image respects border radius
+                      child: () {
+                        final hasLocalImage = log.imagePath != null && File(log.imagePath!).existsSync();
+                        final hasRemoteImage = log.imageUrl != null && log.imageUrl!.isNotEmpty;
+                        return hasLocalImage
+                            ? Image.file(File(log.imagePath!), fit: BoxFit.cover)
+                            : hasRemoteImage
+                            ? Image.network(
+                          log.imageUrl!,
                           fit: BoxFit.cover,
-                        ),
-                      )
-                          : Icon(Icons.restaurant_rounded,
-                          color: mealColor.withOpacity(0.7), size: 20),
+                          errorBuilder: (ctx, _, __) => Icon(
+                            Icons.restaurant_rounded,
+                            color: mealColor.withOpacity(0.7),
+                            size: 20,
+                          ),
+                        )
+                            : Icon(
+                          Icons.restaurant_rounded,
+                          color: mealColor.withOpacity(0.7),
+                          size: 20,
+                        );
+                      }(),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -958,7 +1009,9 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
   }
 
   void _showImageDialog(NutritionLog log) {
-    final hasImage = log.imagePath != null && File(log.imagePath!).existsSync();
+    final hasLocalImage = log.imagePath != null && File(log.imagePath!).existsSync();
+    final hasRemoteImage = log.imageUrl != null && log.imageUrl!.isNotEmpty;
+    final hasImage = hasLocalImage || hasRemoteImage;
 
     showDialog(
       context: context,
@@ -974,39 +1027,25 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               // Image or placeholder
-              hasImage
-                  ? ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20)),
-                child: Image.file(
-                  File(log.imagePath!),
-                  width: double.infinity,
-                  height: 260,
-                  fit: BoxFit.cover,
-                ),
-              )
-                  : Container(
+              hasLocalImage
+                  ? Image.file(
+                File(log.imagePath!),
                 width: double.infinity,
-                height: 180,
-                decoration: BoxDecoration(
-                  color: _C.bg,
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20)),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.no_photography_rounded,
-                        color: _C.text3, size: 48),
-                    const SizedBox(height: 12),
-                    const Text('No image captured',
-                        style: TextStyle(
-                            color: _C.text3,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
+                height: 260,
+                fit: BoxFit.cover,
+              )
+                  : hasRemoteImage
+                  ? Image.network(
+                log.imageUrl!,
+                width: double.infinity,
+                height: 260,
+                fit: BoxFit.cover,
+                loadingBuilder: (ctx, child, progress) => progress == null
+                    ? child
+                    : const Center(child: CircularProgressIndicator(color: _C.primary)),
+                errorBuilder: (ctx, _, __) => _noImagePlaceholder(),
+              )
+                  : _noImagePlaceholder(),
 
               // Food info
               Padding(
@@ -1082,6 +1121,33 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                 style: const TextStyle(fontSize: 11, color: _C.text3)),
           ],
         ),
+      ),
+    );
+  }
+
+  final _localDb = LocalDbService();
+
+  Future<void> _saveCacheLocally(List<NutritionLog> logs) async {
+    await _localDb.cacheNutritionLogs(logs);
+  }
+
+  Future<List<NutritionLog>> _loadCacheLocally() async {
+    return await _localDb.getNutritionLogsForDate(_userId, _selectedDate);
+  }
+
+  Widget _noImagePlaceholder() {
+    return Container(
+      width: double.infinity,
+      height: 180,
+      decoration: const BoxDecoration(color: _C.bg),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.no_photography_rounded, color: _C.text3, size: 48),
+          const SizedBox(height: 12),
+          const Text('No image captured',
+              style: TextStyle(color: _C.text3, fontSize: 14, fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }

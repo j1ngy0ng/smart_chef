@@ -14,6 +14,7 @@ class NutritionLog {
   final String? barcode;
   final DateTime loggedAt;
   final String? imagePath;
+  final String? imageUrl;
 
   NutritionLog({
     required this.id,
@@ -28,6 +29,7 @@ class NutritionLog {
     this.barcode,
     required this.loggedAt,
     this.imagePath,
+    this.imageUrl,
   });
 
   factory NutritionLog.fromMap(Map<String, dynamic> map) {
@@ -44,6 +46,7 @@ class NutritionLog {
       barcode: map['barcode'],
       loggedAt: DateTime.tryParse(map['logged_at'] ?? '') ?? DateTime.now(),
       imagePath: map['image_path'],
+      imageUrl: map['image_url'],
     );
   }
 
@@ -59,6 +62,7 @@ class NutritionLog {
     'barcode': barcode,
     'logged_at': loggedAt.toIso8601String(),
     'image_path': imagePath,
+    'image_url': imageUrl,
   };
 }
 

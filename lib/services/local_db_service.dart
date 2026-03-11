@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/meal_model.dart';
+import '../models/nutrition_model.dart';
 
 class LocalDbService {
   static Database? _db;
@@ -18,7 +19,7 @@ class LocalDbService {
 
     return await openDatabase(
       path,
-      version: 2, // Incremented version to trigger onUpgrade for the new table
+      version: 3, // Incremented version to trigger onUpgrade for the new table
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE meals(
@@ -90,6 +91,23 @@ class LocalDbService {
           )
           ''');
 
+        await db.execute('''
+          CREATE TABLE nutrition_logs_cache (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            meal_type TEXT NOT NULL,
+            food_name TEXT NOT NULL,
+            calories REAL NOT NULL,
+            protein REAL NOT NULL,
+            carbs REAL NOT NULL,
+            fat REAL NOT NULL,
+            serving_size REAL NOT NULL,
+            barcode TEXT,
+            image_path TEXT,
+            image_url TEXT,
+            logged_at TEXT NOT NULL
+          )
+        ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -113,6 +131,26 @@ class LocalDbService {
               image TEXT,
               kcal TEXT,
               duration TEXT
+            )
+          ''');
+        }
+
+        if (oldVersion < 3) {
+          await db.execute('''
+            CREATE TABLE nutrition_logs_cache (
+              id TEXT PRIMARY KEY,
+              user_id TEXT NOT NULL,
+              meal_type TEXT NOT NULL,
+              food_name TEXT NOT NULL,
+              calories REAL NOT NULL,
+              protein REAL NOT NULL,
+              carbs REAL NOT NULL,
+              fat REAL NOT NULL,
+              serving_size REAL NOT NULL,
+              barcode TEXT,
+              image_path TEXT,
+              image_url TEXT,
+              logged_at TEXT NOT NULL
             )
           ''');
         }
@@ -330,4 +368,61 @@ class LocalDbService {
     return await db.query('cached_liked_posts', orderBy: 'created_at DESC');
   }
 
+  Future<void> cacheNutritionLogs(List<NutritionLog> logs) async {
+    final db = await database;
+    final batch = db.batch();
+    for (final log in logs) {
+      batch.insert(
+        'nutrition_logs_cache',
+        {
+          'id': log.id.isEmpty
+              ? '${log.userId}_${log.loggedAt.millisecondsSinceEpoch}'
+              : log.id,
+          'user_id': log.userId,
+          'meal_type': log.mealType,
+          'food_name': log.foodName,
+          'calories': log.calories,
+          'protein': log.protein,
+          'carbs': log.carbs,
+          'fat': log.fat,
+          'serving_size': log.servingSize,
+          'barcode': log.barcode,
+          'image_path': log.imagePath,
+          'image_url': log.imageUrl,
+          'logged_at': log.loggedAt.toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+    print('=== SQLITE CACHED: ${logs.length} nutrition logs ===');
+  }
+
+  Future<List<NutritionLog>> getNutritionLogsForDate(
+      String userId, DateTime date) async {
+    final db = await database;
+    final startOfDay =
+    DateTime(date.year, date.month, date.day).toIso8601String();
+    final endOfDay =
+    DateTime(date.year, date.month, date.day, 23, 59, 59).toIso8601String();
+
+    final results = await db.query(
+      'nutrition_logs_cache',
+      where: 'user_id = ? AND logged_at >= ? AND logged_at <= ?',
+      whereArgs: [userId, startOfDay, endOfDay],
+      orderBy: 'logged_at ASC',
+    );
+
+    print('=== SQLITE LOADED: ${results.length} nutrition logs ===');
+    return results.map((row) => NutritionLog.fromMap(row)).toList();
+  }
+
+  Future<void> deleteNutritionLog(String logId) async {
+    final db = await database;
+    await db.delete(
+      'nutrition_logs_cache',
+      where: 'id = ?',
+      whereArgs: [logId],
+    );
+  }
 }
