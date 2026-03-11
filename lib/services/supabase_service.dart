@@ -369,4 +369,68 @@ class SupabaseService {
         .eq('user_id', user.id)
         .order('created_at', ascending: false);
   }
+
+  // Inside SupabaseService.dart
+  Future<void> saveMealToCloud({
+    required String recipeId,
+    required String title,
+    required String kcal,
+    required String imageUrl,
+    required String ingredients,
+    required String steps,
+  }) async {
+    final user = currentUser;
+    if (user == null) return;
+
+    await _client.from('saved_planner_meals').insert({
+      'user_id': user.id,
+      'recipe_id': recipeId,
+      'title': title,
+      'kcal': kcal,
+      'image_url': imageUrl,
+      'ingredients': ingredients,
+      'steps': steps,
+    });
+  }
+
+  // --- MEAL PLANNER CLOUD SYNC ---
+
+  // Check if this specific meal ID is already in your Cloud Planner
+  Future<bool> isMealSavedInCloud(String recipeId) async {
+    final user = currentUser;
+    if (user == null) return false;
+
+    final response = await _client
+        .from('saved_planner_meals')
+        .select('id')
+        .eq('recipe_id', recipeId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    return response != null;
+  }
+
+  // Remove the meal from the Cloud Planner
+  Future<void> removeMealFromCloud(String recipeId) async {
+    final user = currentUser;
+    if (user == null) return;
+
+    await _client
+        .from('saved_planner_meals')
+        .delete()
+        .eq('recipe_id', recipeId)
+        .eq('user_id', user.id);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchSavedMeals() async {
+    final user = currentUser;
+    if (user == null) return [];
+
+    // This matches the 'saved_planner_meals' table created earlier
+    return await _client
+        .from('saved_planner_meals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', ascending: false);
+  }
 }

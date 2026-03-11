@@ -48,8 +48,19 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             label: 'Community Favorites',
             onTap: () => _showAddOptionSheet(context, controller, postController),
           ),
+          SpeedDialChild(
+            child: const Icon(Icons.bookmark_outline, color: Colors.white),
+            backgroundColor: const Color(0xFF00A676),
+            label: 'My Saved Meals',
+            onTap: () {
+              // Fetch user's saved meals before showing the sheet
+              controller.fetchSavedMeals();
+              _showSavedMealSheet(context, controller);
+            },
+          ),
         ],
       ),
+
       body: Column(
         children: [
           const SizedBox(height: 50),
@@ -206,7 +217,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                               itemCount: filteredPosts.length,
                               itemBuilder: (context, index) {
                                 final post = filteredPosts[index];
-                                var selectedType = "Lunch".obs; // Local observable for the dropdown
+                                var selectedType = "Lunch".obs;
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 12),
@@ -220,11 +231,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                                     children: [
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(10),
-                                        child: Image.network(
-                                          post.imageUrl ?? "",
-                                          width: 60, height: 60, fit: BoxFit.cover,
-                                          errorBuilder: (c, e, s) => Container(color: Colors.grey[200], width: 60, height: 60, child: const Icon(Icons.fastfood)),
-                                        ),
+                                        child: Image.network(post.imageUrl ?? "", width: 60, height: 60, fit: BoxFit.cover),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -267,6 +274,78 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showSavedMealSheet(BuildContext context, PlannerController controller) {
+    controller.fetchSavedMeals();
+
+    Get.bottomSheet(
+      isScrollControlled: true,
+      Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(25),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+        child: Column(
+          children: [
+            const Text("My Saved Meals", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Expanded(
+              child: Obx(() => ListView.builder(
+                itemCount: controller.cloudSavedMeals.length,
+                itemBuilder: (context, index) {
+                  final meal = controller.cloudSavedMeals[index];
+                  var selectedType = "Lunch".obs;
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(meal['image_url'], width: 50, height: 50, fit: BoxFit.cover)),
+                      title: Expanded(
+                        child: Text(
+                          meal['title'],
+                          maxLines: 2, // Allow up to 2 lines
+                          overflow: TextOverflow.ellipsis, // Add '...' if it's still too long
+                        ),
+                      ),
+                      subtitle: Obx(() => DropdownButton<String>(
+                        value: selectedType.value,
+                        items: ['Breakfast', 'Lunch', 'Dinner'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                        onChanged: (val) => selectedType.value = val!,
+                      )),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 1. ADD TO PLANNER BUTTON
+                          IconButton(
+                            icon: const Icon(Icons.add_circle, color: Color(0xFF00A676), size: 30),
+                            onPressed: () {
+                              // Pass the selectedType to your add method
+                              controller.addMealFromCloud(meal, selectedType.value);
+                              Get.back(); // Close the sheet
+                            },
+                          ),
+
+                          // 2. REMOVE/UNSAVE BUTTON
+                          IconButton(
+                            icon: const Icon(Icons.bookmark_remove, color: Colors.redAccent),
+                            onPressed: () async {
+                              // Assuming your toggleCloudSave takes the recipeId
+                              await controller.toggleCloudSave(meal['recipe_id'].toString() as Meal);
+                              // Refresh the list after removing
+                              controller.fetchSavedMeals();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              )),
+            ),
+          ],
+        ),
       ),
     );
   }

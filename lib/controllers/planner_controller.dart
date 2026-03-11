@@ -2,14 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:intl/intl.dart';
 import '../models/grocery_item.dart';
 import '../models/meal_model.dart';
 import '../models/post_model.dart';
 import '../services/local_db_service.dart';
 import 'package:http/http.dart' as http;
+import '../services/supabase_service.dart';
 
 class PlannerController extends GetxController {
   final LocalDbService _dbService = LocalDbService();
+  final SupabaseService _supabaseService = SupabaseService();
 
   // Observable states
   var isLoading = false.obs;
@@ -23,6 +26,9 @@ class PlannerController extends GetxController {
   var priceCache = <String, double>{}.obs; // The "Smart" memory
   // Calculated Totals
   double get totalGroceryPrice => groceryList.fold(0, (sum, item) => sum + item.price);
+  //supabase
+  var isCloudSaved = false.obs;
+  var cloudSavedMeals = <Map<String, dynamic>>[].obs;
 
   @override
   void onInit() {
@@ -340,4 +346,81 @@ class PlannerController extends GetxController {
     focusedDay.value = focused;
     fetchMealsForDate(selected);
   }
-}
+
+  // Inside PlannerController.dart
+  Future<void> saveMealToCloud(Meal meal) async {
+    try {
+      isLoading.value = true;
+
+      await _supabaseService.saveMealToCloud(
+        recipeId: meal.id.toString(),
+        title: meal.title,
+        kcal: meal.kcal.toString(),
+        imageUrl: meal.imageUrl,
+        ingredients: meal.ingredients,
+        steps: meal.steps,
+      );
+
+      Get.snackbar("Success", "Meal saved to your Cloud Planner!");
+    } catch (e) {
+      Get.snackbar("Error", "Could not save to cloud: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // 1. Handle the Meal object (for the Detail Screen)
+  Future<void> toggleCloudSave(Meal meal) async {
+    try {
+      final isAlreadySaved = await _supabaseService.isMealSavedInCloud(meal.id.toString());
+
+      if (isAlreadySaved) {
+        await _supabaseService.removeMealFromCloud(meal.id.toString());
+        isCloudSaved.value = false;
+        Get.snackbar("Removed", "Removed from Cloud Planner");
+      } else {
+        await _supabaseService.saveMealToCloud(
+          recipeId: meal.id.toString(),
+          title: meal.title,
+          kcal: meal.kcal.toString(),
+          imageUrl: meal.imageUrl,
+          ingredients: meal.ingredients,
+          steps: meal.steps,
+        );
+        isCloudSaved.value = true;
+        Get.snackbar("Saved", "Saved to Cloud Planner");
+      }
+    } catch (e) {
+      Get.snackbar("Error", "Could not update cloud: $e");
+    }
+  }
+
+// 2. Handle the String recipeId (for the Saved Meals Sheet)
+  Future<void> removeByRecipeId(String recipeId) async {
+    await _supabaseService.removeMealFromCloud(recipeId);
+    fetchSavedMeals(); // Refresh the list
+    Get.snackbar("Removed", "Meal removed from Cloud Planner");
+  }
+
+  Future<void> fetchSavedMeals() async {
+    // Use your SupabaseService to fetch from 'saved_planner_meals'
+    final data = await _supabaseService.fetchSavedMeals();
+    cloudSavedMeals.assignAll(data);
+  }
+
+// Add the 'type' parameter here
+  Future<void> addMealFromCloud(Map<String, dynamic> mealData, String type) async {
+    final meal = Meal(
+      title: mealData['title'],
+      type: type, // Use the type passed from the Dropdown
+      kcal: int.tryParse(mealData['kcal'].toString()) ?? 0,
+      imageUrl: mealData['image_url'],
+      ingredients: mealData['ingredients'],
+      steps: mealData['steps'],
+      date: DateFormat('yyyy-MM-dd').format(selectedDay.value),
+    );
+
+    // Use your existing local DB insertion method
+    await addMeal(meal);
+    Get.snackbar("Added", "${meal.title} added to your plan!");
+  }}

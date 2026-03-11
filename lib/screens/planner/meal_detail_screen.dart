@@ -69,6 +69,20 @@ class MealDetailScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        // --- CLOUD SAVE BUTTON ---
+                        Padding(
+                          padding: const EdgeInsets.only(top: 15, bottom: 5, right: 10), // Added right padding
+                          child: Obx(() => FloatingActionButton.small(
+                            heroTag: "cloud_btn_${currentMeal.id}",
+                            backgroundColor: Colors.white,
+                            elevation: 2,
+                            child: Icon(
+                              controller.isCloudSaved.value ? Icons.bookmark : Icons.bookmark_border,
+                              color: controller.isCloudSaved.value ? Colors.blue : Colors.blueAccent,
+                            ),
+                            onPressed: () => controller.toggleCloudSave(currentMeal),
+                          )),
+                        ),
                         //add to grocery list button
                         Padding(
                           padding: const EdgeInsets.only(top: 15, bottom: 5),
