@@ -13,6 +13,8 @@ import '../../controllers/add_meal_controller.dart';
 import '../../models/food_item_model.dart';
 import '../../theme/colors.dart';
 import 'meal_history_screen.dart';
+import 'nutrition_analytics_screen.dart';
+import 'dietary_preferences_screen.dart';
 
 typedef _C = C;
 
@@ -91,14 +93,14 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
             delegate: SliverChildListDelegate([
               const SizedBox(height: 12),
               _buildCalorieHeroCard(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              _buildQuickActionRow(),
+              const SizedBox(height: 12),
               _buildMacroCard(),
               const SizedBox(height: 16),
               _buildWaterCard(),
               const SizedBox(height: 16),
               _buildActivityRow(),
-              const SizedBox(height: 16),
-              _buildInsightsSection(),
               const SizedBox(height: 96), // FAB clearance
             ]),
           ),
@@ -319,6 +321,108 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
     );
   }
 
+  Widget _buildQuickActionRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () => Get.to(
+                  () => const NutritionAnalyticsScreen(),
+              transition: Transition.rightToLeft,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
+              decoration: BoxDecoration(
+                color: _C.card,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10, offset: const Offset(0, 3),
+                )],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 30, height: 30,
+                    decoration: BoxDecoration(
+                      color: _C.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(Icons.show_chart_rounded,
+                        color: _C.primary, size: 17),
+                  ),
+                  const SizedBox(width: 8),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('View Trends',
+                          style: TextStyle(fontSize: 13,
+                              fontWeight: FontWeight.w700, color: _C.text1)),
+                      Text('Analytics',
+                          style: TextStyle(fontSize: 10, color: _C.text3)),
+                    ],
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 12, color: _C.text3),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => Get.to(
+                  () => const DietaryPreferencesScreen(),
+              transition: Transition.rightToLeft,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
+              decoration: BoxDecoration(
+                color: _C.card,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10, offset: const Offset(0, 3),
+                )],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 30, height: 30,
+                    decoration: BoxDecoration(
+                      color: _C.carbs.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(Icons.tune_rounded,
+                        color: _C.carbs, size: 17),
+                  ),
+                  const SizedBox(width: 8),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Diet Goals',
+                          style: TextStyle(fontSize: 13,
+                              fontWeight: FontWeight.w700, color: _C.text1)),
+                      Text('Preferences',
+                          style: TextStyle(fontSize: 10, color: _C.text3)),
+                    ],
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 12, color: _C.text3),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // ── Macro Card ──────────────────────────────────────────────────────────────
   Widget _buildMacroCard() {
     return GestureDetector(
@@ -381,66 +485,150 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
     required double progress,
     required Color color,
   }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(children: [
-              Text(emoji, style: const TextStyle(fontSize: 14)),
-              const SizedBox(width: 6),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _C.text1)),
-            ]),
-            RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: '${current.toInt()}',
+    final bool isExceeded = current > goal;
+    final double overPercent = isExceeded ? ((current - goal) / goal * 100) : 0;
+    final Color activeColor = isExceeded ? _C.errorRed : color;
+    final double clampedProgress = progress.clamp(0.0, 1.0);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: isExceeded
+          ? const EdgeInsets.fromLTRB(10, 10, 10, 10)
+          : EdgeInsets.zero,
+      decoration: isExceeded
+          ? BoxDecoration(
+        color: _C.errorRed.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _C.errorRed.withOpacity(0.25)),
+      )
+          : const BoxDecoration(),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(children: [
+                Text(emoji, style: const TextStyle(fontSize: 14)),
+                const SizedBox(width: 6),
+                Text(label,
                     style: TextStyle(
-                        color: color,
                         fontSize: 14,
-                        fontWeight: FontWeight.w700),
-                  ),
-                  TextSpan(
-                    text: ' / ${goal.toInt()}g',
-                    style: const TextStyle(color: _C.text3, fontSize: 12),
+                        fontWeight: FontWeight.w600,
+                        color: isExceeded ? _C.errorRed : _C.text1)),
+                if (isExceeded) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _C.errorRed,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.warning_rounded,
+                            color: Colors.white, size: 10),
+                        const SizedBox(width: 3),
+                        Text(
+                          '+${overPercent.toInt()}%',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
+              ]),
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${current.toInt()}',
+                      style: TextStyle(
+                          color: activeColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700),
+                    ),
+                    TextSpan(
+                      text: ' / ${goal.toInt()}g',
+                      style: const TextStyle(color: _C.text3, fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 7),
-        Stack(children: [
-          Container(
-            height: 9,
-            decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(5)),
+            ],
           ),
-          FractionallySizedBox(
-            widthFactor: progress,
-            child: Container(
+          const SizedBox(height: 7),
+          Stack(children: [
+            Container(
               height: 9,
               decoration: BoxDecoration(
-                gradient:
-                LinearGradient(colors: [color.withOpacity(0.65), color]),
-                borderRadius: BorderRadius.circular(5),
-                boxShadow: [
-                  BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2))
-                ],
+                  color: activeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(5)),
+            ),
+            FractionallySizedBox(
+              widthFactor: clampedProgress,
+              child: Container(
+                height: 9,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isExceeded
+                        ? [_C.errorRed.withOpacity(0.7), _C.errorRed]
+                        : [color.withOpacity(0.65), color],
+                  ),
+                  borderRadius: BorderRadius.circular(5),
+                  boxShadow: [
+                    BoxShadow(
+                        color: activeColor.withOpacity(0.35),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2))
+                  ],
+                ),
               ),
             ),
-          ),
-        ]),
-      ],
+            // Red glowing dot at end of bar when exceeded
+            if (isExceeded)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: _C.errorRed,
+                    borderRadius: BorderRadius.circular(5),
+                    boxShadow: [
+                      BoxShadow(
+                          color: _C.errorRed.withOpacity(0.6),
+                          blurRadius: 6,
+                          spreadRadius: 1),
+                    ],
+                  ),
+                ),
+              ),
+          ]),
+          // Message below bar when exceeded
+          if (isExceeded) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.info_outline_rounded,
+                    size: 12, color: _C.errorRed),
+                const SizedBox(width: 4),
+                Text(
+                  '${(current - goal).toInt()}g over your daily $label goal',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: _C.errorRed,
+                      fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -641,150 +829,6 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ── Smart Insights ──────────────────────────────────────────────────────────
-  Widget _buildInsightsSection() {
-    return Obx(() {
-      if (_ctrl.insights.isEmpty) return const SizedBox.shrink();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionHeader('Smart Insights', 'AI · ${_ctrl.insights.length} new'),
-          const SizedBox(height: 10),
-          ..._ctrl.insights
-              .map((insight) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _insightCard(insight),
-          ))
-              .toList(),
-        ],
-      );
-    });
-  }
-
-  Widget _insightCard(NutritionInsight insight) {
-    final isWarn = insight.severity == 'warning';
-    final isOk = insight.severity == 'success';
-    final cardColor = isOk
-        ? const Color(0xFFE8F5E9)
-        : isWarn
-        ? const Color(0xFFFFF8E1)
-        : const Color(0xFFE3F2FD);
-    final borderColor = isOk
-        ? _C.success.withOpacity(0.3)
-        : isWarn
-        ? _C.warning.withOpacity(0.3)
-        : _C.protein.withOpacity(0.3);
-    final accentColor = isOk ? _C.success : isWarn ? _C.warning : _C.protein;
-    final emoji = isOk ? '✅' : isWarn ? '⚠️' : '💡';
-
-    return Dismissible(
-      key: Key(insight.id),
-      direction: DismissDirection.endToStart,
-      onDismissed: (_) => _ctrl.markInsightRead(insight.id),
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.check_circle_outline_rounded,
-            color: Colors.redAccent),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor, width: 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(emoji, style: const TextStyle(fontSize: 18)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                                color: accentColor,
-                                borderRadius: BorderRadius.circular(6)),
-                            child: const Text('Smart Insight',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700)),
-                          ),
-                          const SizedBox(width: 6),
-                          const Text('AI Powered',
-                              style: TextStyle(
-                                  fontSize: 10, color: _C.text3)),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        insight.title,
-                        style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: _C.text1),
-                      ),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => _ctrl.markInsightRead(insight.id),
-                  child: Icon(Icons.close_rounded,
-                      size: 16, color: _C.text3),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(insight.description,
-                style: const TextStyle(
-                    fontSize: 13, color: _C.text2, height: 1.5)),
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () {
-                // Navigate to recommended meals or history
-                Get.snackbar('🍽️ Coming Soon',
-                    'Recommended meals screen is next!',
-                    snackPosition: SnackPosition.BOTTOM);
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 9),
-                decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: accentColor.withOpacity(0.2), width: 1),
-                ),
-                child: Center(
-                  child: Text(
-                    'View Recommended Meals →',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: accentColor),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
