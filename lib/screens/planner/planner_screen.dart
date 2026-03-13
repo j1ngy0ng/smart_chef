@@ -32,7 +32,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
         children: [
           SpeedDialChild(
             child: const Icon(
-              Icons.shopping_cart_outlined,
+              Icons.shopping_cart,
               color: Colors.white,
             ),
             backgroundColor: const Color(0xFF00A676),
@@ -46,14 +46,14 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             onTap: () => _showSmartSetupSheet(context, controller),
           ),
           SpeedDialChild(
-            child: const Icon(Icons.search, color: Colors.white),
+            child: const Icon(Icons.local_fire_department, color: Colors.white),
             backgroundColor: Color(0xFF00A676),
             label: 'Community Favorites',
             onTap: () =>
                 _showAddOptionSheet(context, controller, postController),
           ),
           SpeedDialChild(
-            child: const Icon(Icons.bookmark_outline, color: Colors.white),
+            child: const Icon(Icons.bookmark, color: Colors.white),
             backgroundColor: const Color(0xFF00A676),
             label: 'My Saved Meals',
             onTap: () {
