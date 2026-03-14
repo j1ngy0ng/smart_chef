@@ -563,6 +563,8 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                       ),
                       selected: isSelected,
 
+                      checkmarkColor: Colors.white,
+
                       // --- HERE IS THE COLOR CHANGE ---
                       selectedColor: const Color(0xFF00A676),
 
