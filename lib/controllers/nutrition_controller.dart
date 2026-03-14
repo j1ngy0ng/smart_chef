@@ -35,18 +35,18 @@ class NutritionController extends GetxController {
   final RxInt waterGlasses = 0.obs;
 
   // ─── Computed getters ────────────────────────────────────────────────────────
-  double get calorieGoal => goals.value?.calorieGoal ?? 2000;
-  double get proteinGoal => goals.value?.proteinGoal ?? 150;
-  double get carbsGoal => goals.value?.carbsGoal ?? 250;
-  double get fatGoal => goals.value?.fatGoal ?? 65;
-  int get waterGoal => goals.value?.waterGoal ?? 8;
+  final RxDouble calorieGoal = 2000.0.obs;
+  final RxDouble proteinGoal = 150.0.obs;
+  final RxDouble carbsGoal   = 250.0.obs;
+  final RxDouble fatGoal     = 65.0.obs;
+  final RxInt    waterGoal   = 8.obs;
 
-  double get calorieProgress => (totalCalories.value / calorieGoal).clamp(0.0, 1.0);
-  double get proteinProgress => (totalProtein.value / proteinGoal).clamp(0.0, 1.0);
-  double get carbsProgress => (totalCarbs.value / carbsGoal).clamp(0.0, 1.0);
-  double get fatProgress => (totalFat.value / fatGoal).clamp(0.0, 1.0);
-  double get waterProgress => (waterGlasses.value / waterGoal).clamp(0.0, 1.0);
-  double get caloriesRemaining => calorieGoal - totalCalories.value;
+  double get calorieProgress => (totalCalories.value / calorieGoal.value).clamp(0.0, 1.0);
+  double get proteinProgress => (totalProtein.value / proteinGoal.value).clamp(0.0, 1.0);
+  double get carbsProgress => (totalCarbs.value / carbsGoal.value).clamp(0.0, 1.0);
+  double get fatProgress => (totalFat.value / fatGoal.value).clamp(0.0, 1.0);
+  double get waterProgress => (waterGlasses.value / waterGoal.value).clamp(0.0, 1.0);
+  double get caloriesRemaining => calorieGoal.value - totalCalories.value;
 
   String get userId => _client.auth.currentUser?.id ?? '';
 
@@ -84,21 +84,40 @@ class NutritionController extends GetxController {
           .eq('user_id', userId)
           .maybeSingle();
 
-      goals.value = data != null
+      final g = data != null
           ? UserGoals.fromMap(data)
           : UserGoals.defaults(userId);
+
+      goals.value      = g;
+      calorieGoal.value = g.calorieGoal;
+      proteinGoal.value = g.proteinGoal;
+      carbsGoal.value   = g.carbsGoal;
+      fatGoal.value     = g.fatGoal;
+      waterGoal.value   = g.waterGoal;
     } catch (e) {
-      goals.value = UserGoals.defaults(userId);
+      final g = UserGoals.defaults(userId);
+      goals.value       = g;
+      calorieGoal.value = g.calorieGoal;
+      proteinGoal.value = g.proteinGoal;
+      carbsGoal.value   = g.carbsGoal;
+      fatGoal.value     = g.fatGoal;
+      waterGoal.value   = g.waterGoal;
     }
   }
 
   Future<void> saveGoals(UserGoals newGoals) async {
     isSaving.value = true;
     try {
-      await _client.from('user_goals').upsert(newGoals.toMap());
-      goals.value = newGoals;
-      Get.snackbar('✅ Saved', 'Your nutrition goals have been updated.',
-          snackPosition: SnackPosition.TOP);
+      await _client.from('user_goals').upsert(
+        newGoals.toMap(),
+        onConflict: 'user_id',
+      );
+      goals.value       = newGoals;
+      calorieGoal.value = newGoals.calorieGoal;
+      proteinGoal.value = newGoals.proteinGoal;
+      carbsGoal.value   = newGoals.carbsGoal;
+      fatGoal.value     = newGoals.fatGoal;
+      waterGoal.value   = newGoals.waterGoal;
     } catch (e) {
       _handleError('saveGoals', e);
     } finally {

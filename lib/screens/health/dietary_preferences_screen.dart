@@ -43,6 +43,8 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
 
   final TextEditingController _calCtrl = TextEditingController();
   bool _isSaving = false;
+  Worker? _autoSaveWorker;
+  final RxInt _changeCounter = 0.obs;
 
   // Computed gram goals from ratios + calorie goal
   double get _proteinGoalG => (_calorieGoal * _proteinRatio / 4).roundToDouble();
@@ -57,6 +59,37 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
         vsync: this, duration: const Duration(milliseconds: 500))
       ..forward();
     _loadFromController();
+    _autoSaveWorker = debounce(
+      _changeCounter,
+          (_) => _autoSave(),
+      time: const Duration(milliseconds: 800),
+    );
+  }
+
+  void _triggerSave() {
+    _changeCounter.value++;
+  }
+
+  Future<void> _autoSave() async {
+    final parsed = double.tryParse(_calCtrl.text);
+    if (parsed == null || parsed < 500 || parsed > 10000) return;
+
+    final newGoals = UserGoals(
+      userId:       _ctrl.userId,
+      calorieGoal:  parsed,
+      proteinGoal:  _proteinGoalG,
+      carbsGoal:    _carbsGoalG,
+      fatGoal:      _fatGoalG,
+      waterGoal:    _ctrl.goals.value?.waterGoal ?? 8,
+      isVegetarian: _isVegetarian,
+      isVegan:      _isVegan,
+      isLowCarb:    _isLowCarb,
+      isHighProtein: _isHighProtein,
+      isKeto:       _isKeto,
+    );
+    await _ctrl.saveGoals(newGoals);
+    // Subtle confirmation — no snackbar spam
+    HapticFeedback.lightImpact();
   }
 
   void _loadFromController() {
@@ -81,6 +114,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
 
   @override
   void dispose() {
+    _autoSaveWorker?.dispose();
     _entryAnim.dispose();
     _calCtrl.dispose();
     super.dispose();
@@ -115,6 +149,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
           break;
       }
     });
+    _triggerSave();
   }
 
   void _toggleDiet(String diet, bool val) {
@@ -134,6 +169,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
           break;
       }
     });
+    _triggerSave();
   }
 
   // Keep ratios summing to 1 when slider changes
@@ -145,6 +181,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
       _carbsRatio   = remaining * ratio;
       _fatRatio     = remaining * (1 - ratio);
     });
+    _triggerSave();
   }
 
   void _onCarbsChanged(double v) {
@@ -155,6 +192,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
       _proteinRatio = remaining * ratio;
       _fatRatio     = remaining * (1 - ratio);
     });
+    _triggerSave();
   }
 
   void _onFatChanged(double v) {
@@ -165,6 +203,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
       _proteinRatio = remaining * ratio;
       _carbsRatio   = remaining * (1 - ratio);
     });
+    _triggerSave();
   }
 
   Future<void> _save() async {
@@ -211,8 +250,6 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
                 _buildMacroSlidersCard(),
                 const SizedBox(height: 16),
                 _buildMacroSummaryCard(),
-                const SizedBox(height: 24),
-                _buildSaveButton(),
               ],
             ),
           ),
@@ -277,6 +314,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
                 final clamped = v.clamp(500.0, 10000.0);
                 _calCtrl.text = clamped.toInt().toString();
                 setState(() => _calorieGoal = clamped);
+                _triggerSave();
               }),
               const SizedBox(width: 12),
               // Input
@@ -325,6 +363,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
                 final clamped = v.clamp(500.0, 10000.0);
                 _calCtrl.text = clamped.toInt().toString();
                 setState(() => _calorieGoal = clamped);
+                _triggerSave();
               }),
             ],
           ),
@@ -340,6 +379,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
                         HapticFeedback.selectionClick();
                         _calCtrl.text = kcal.toString();
                         setState(() => _calorieGoal = kcal.toDouble());
+                        _triggerSave();
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -672,47 +712,6 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
             Text(pct,
                 style: const TextStyle(color: Colors.white54, fontSize: 10)),
           ],
-        ),
-      ),
-    );
-  }
-
-  // ── Save Button ───────────────────────────────────────────────────────────────
-  Widget _buildSaveButton() {
-    return GestureDetector(
-      onTap: _isSaving ? null : _save,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 54,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: _isSaving
-                ? [_C.primary.withOpacity(0.5), _C.dark.withOpacity(0.5)]
-                : [_C.primary, _C.dark],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: _isSaving ? null : [BoxShadow(
-            color: _C.primary.withOpacity(0.4),
-            blurRadius: 12, offset: const Offset(0, 4),
-          )],
-        ),
-        child: Center(
-          child: _isSaving
-              ? const SizedBox(width: 22, height: 22,
-              child: CircularProgressIndicator(
-                  color: Colors.white, strokeWidth: 2.5))
-              : const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.check_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('Save Preferences',
-                  style: TextStyle(color: Colors.white,
-                      fontSize: 16, fontWeight: FontWeight.w700)),
-            ],
-          ),
         ),
       ),
     );

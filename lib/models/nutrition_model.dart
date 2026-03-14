@@ -114,11 +114,11 @@ class UserGoals {
 
   Map<String, dynamic> toMap() => {
     'user_id': userId,
-    'calorie_goal': calorieGoal,
-    'protein_goal': proteinGoal,
-    'carbs_goal': carbsGoal,
-    'fat_goal': fatGoal,
-    'water_goal': waterGoal,
+    'calorie_goal': calorieGoal.toInt(),
+    'protein_goal': proteinGoal.toInt(),
+    'carbs_goal': carbsGoal.toInt(),
+    'fat_goal': fatGoal.toInt(),
+    'water_goal': waterGoal.toInt(),
     'is_vegetarian': isVegetarian,
     'is_vegan': isVegan,
     'is_low_carb': isLowCarb,

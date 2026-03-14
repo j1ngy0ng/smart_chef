@@ -435,6 +435,34 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionHeader('Macronutrients', 'View History →'),
+          Obx(() {
+            final g = _ctrl.goals.value;
+            if (g == null) return const SizedBox.shrink();
+            final active = <String>[];
+            if (g.isVegetarian) active.add('🥦 Vegetarian');
+            if (g.isVegan)      active.add('🌱 Vegan');
+            if (g.isLowCarb)    active.add('🥑 Low Carb');
+            if (g.isHighProtein) active.add('💪 High Protein');
+            if (g.isKeto)       active.add('🔥 Keto');
+            if (active.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 4),
+              child: Wrap(
+                spacing: 6,
+                children: active.map((label) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _C.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _C.primary.withOpacity(0.2)),
+                  ),
+                  child: Text(label,
+                      style: const TextStyle(fontSize: 11, color: _C.primary,
+                          fontWeight: FontWeight.w600)),
+                )).toList(),
+              ),
+            );
+          }),
           const SizedBox(height: 16),
           AnimatedBuilder(
             animation: _barsAnim,
@@ -448,7 +476,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                       emoji: '🥩',
                       label: 'Protein',
                       current: _ctrl.totalProtein.value,
-                      goal: _ctrl.proteinGoal,
+                      goal: _ctrl.proteinGoal.value,
                       progress: _ctrl.proteinProgress * t,
                       color: _C.protein),
                   const SizedBox(height: 14),
@@ -456,7 +484,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                       emoji: '🌾',
                       label: 'Carbs',
                       current: _ctrl.totalCarbs.value,
-                      goal: _ctrl.carbsGoal,
+                      goal: _ctrl.carbsGoal.value,
                       progress: _ctrl.carbsProgress * t,
                       color: _C.carbs),
                   const SizedBox(height: 14),
@@ -464,7 +492,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                       emoji: '🫒',
                       label: 'Fat',
                       current: _ctrl.totalFat.value,
-                      goal: _ctrl.fatGoal,
+                      goal: _ctrl.fatGoal.value,
                       progress: _ctrl.fatProgress * t,
                       color: _C.fat),
                 ],
@@ -671,8 +699,10 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(
-              _ctrl.waterGoal,
-                  (i) => GestureDetector(
+            _ctrl.waterGoal.value,
+            (i) => Expanded(child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
                   final newVal =
@@ -707,6 +737,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   ),
                 ),
               ),
+            )),
             ),
           ),
           const SizedBox(height: 12),
@@ -725,7 +756,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
             style:
             const TextStyle(fontSize: 11, color: _C.text3),
           ),
-        ],
+          ],
       ),
         ));
   }

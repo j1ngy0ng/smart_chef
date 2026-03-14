@@ -359,8 +359,6 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
         _buildMacroPieChart(),
         const SizedBox(height: 16),
         _buildRecentEntries(),
-        const SizedBox(height: 16),
-        _buildInsightsSection(),
       ],
     );
   }
@@ -371,7 +369,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
     final totalCal = _chartData.fold(0.0, (s, d) => s + d.calories);
     final avgCal = totalCal / _chartData.length;
     final maxCal = _chartData.map((d) => d.calories).reduce(math.max);
-    final goal = _ctrl.calorieGoal;
+    final goal = _ctrl.calorieGoal.value;
     final daysOver = _chartData.where((d) => d.calories > goal).length;
 
     return Row(
@@ -438,7 +436,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
               size: const Size(double.infinity, 180),
               painter: _LineChartPainter(
                 data: _chartData,
-                goal: _ctrl.calorieGoal,
+                goal: _ctrl.calorieGoal.value,
                 progress: t,
               ),
             );
@@ -479,7 +477,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
                   size: const Size(double.infinity, 160),
                   painter: _BarChartPainter(
                     data: _chartData,
-                    goal: _ctrl.calorieGoal,
+                    goal: _ctrl.calorieGoal.value,
                     progress: t,
                   ),
                 );
@@ -782,82 +780,6 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
     );
   }
 
-  // ── Insights ──────────────────────────────────────────────────────────────────
-  Widget _buildInsightsSection() {
-    if (_insights.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionHeader('AI Insights', '${_insights.length} new'),
-        const SizedBox(height: 10),
-        ..._insights.map((i) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _insightTile(i))),
-      ],
-    );
-  }
-
-  Widget _insightTile(NutritionInsight insight) {
-    final isWarn = insight.severity == 'warning';
-    final isOk = insight.severity == 'success';
-    final color = isOk ? _C.success : isWarn ? _C.warning : _C.protein;
-    final bg = isOk
-        ? const Color(0xFFE8F5E9)
-        : isWarn
-        ? const Color(0xFFFFF8E1)
-        : const Color(0xFFE3F2FD);
-    final emoji = isOk ? '✅' : isWarn ? '⚠️' : '💡';
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.25)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 22)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(6)),
-                      child: const Text('AI Insight',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(insight.title,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: _C.text1)),
-                const SizedBox(height: 4),
-                Text(insight.description,
-                    style: const TextStyle(
-                        fontSize: 12, color: _C.text2, height: 1.5)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ── Shared Widgets ────────────────────────────────────────────────────────────
   Widget _chartCard({
     required String title,
@@ -1136,15 +1058,34 @@ class _BarChartPainter extends CustomPainter {
 
       // Intake bar
       final intakeH = (d.calories / maxVal) * chartH * progress;
-      final intakeColor = d.calories > goal ? _C.errorRed : _C.primary;
+      final isOver = d.calories > goal;
       final intakeRect = RRect.fromRectAndCorners(
-        Rect.fromLTWH(
-            groupX + barPad, chartH - intakeH, barW, intakeH),
+        Rect.fromLTWH(groupX + barPad, chartH - intakeH, barW, intakeH),
         topLeft: const Radius.circular(4),
         topRight: const Radius.circular(4),
       );
+
+      // Always draw the green fill
       canvas.drawRRect(intakeRect,
-          Paint()..color = intakeColor.withOpacity(0.85));
+          Paint()..color = _C.primary.withOpacity(0.85));
+
+      // If over goal, draw red border on top instead of filling red
+      if (isOver) {
+        canvas.drawRRect(
+          intakeRect,
+          Paint()
+            ..color = _C.errorRed
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.0,
+        );
+        // Small red cap at top to clearly mark overflow
+        final capRect = RRect.fromRectAndCorners(
+          Rect.fromLTWH(groupX + barPad, chartH - intakeH, barW, 5),
+          topLeft: const Radius.circular(4),
+          topRight: const Radius.circular(4),
+        );
+        canvas.drawRRect(capRect, Paint()..color = _C.errorRed);
+      }
 
       // Burned bar
       final burnedH = (d.burned / maxVal) * chartH * progress;
