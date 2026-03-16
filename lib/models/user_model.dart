@@ -13,7 +13,7 @@ class UserModel {
     return UserModel(
       id: map['id']?.toString() ?? '',
       username: map['username'] ?? 'Anonymous',
-      avatarUrl: map['avatar_url'], // Ensure your model allows this to be String?
+      avatarUrl: map['avatar_url'],
     );
   }
 }

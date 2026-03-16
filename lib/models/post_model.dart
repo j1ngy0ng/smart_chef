@@ -6,7 +6,7 @@ class PostModel {
   final String content;
   final String? imageUrl;
   final int likeCount;
-  final bool isLiked; // Added this field
+  final bool isLiked;
   final UserModel user;
 
   PostModel({
@@ -21,7 +21,6 @@ class PostModel {
 
   factory PostModel.fromMap(Map<String, dynamic> map, {String? currentUserId}) {
     // 1. Handle deep nesting
-    // Sometimes Supabase returns { "posts": { ... } } instead of the post directly
     final postData = map.containsKey('posts') ? map['posts'] : map;
 
     // 2. Identify the User/Profile data
@@ -61,7 +60,7 @@ class PostModel {
       title: map['title'],
       content: map['content'],
       imageUrl: map['image_url'],
-      // We reconstruct the user object from the flattened SQL columns
+      // reconstruct the user object from the flattened SQL columns
       user: UserModel(
         id: map['user_id'],
         username: map['author_name'],

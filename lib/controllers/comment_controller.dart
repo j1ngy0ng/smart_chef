@@ -7,7 +7,7 @@ class CommentController extends GetxController {
   final SupabaseService _service = SupabaseService();
   final commentController = TextEditingController();
 
-  // Use <CommentModel> to ensure type safety in your UI
+  // Use <CommentModel> to ensure type safety in UI
   var comments = <CommentModel>[].obs;
   var isLoading = false.obs;
 

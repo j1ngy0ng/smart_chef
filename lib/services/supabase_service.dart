@@ -10,10 +10,7 @@ import '../main.dart';
 class SupabaseService {
   final SupabaseClient _client = Supabase.instance.client;
 
-  // ==========================
   // AUTH SECTION
-  // ==========================
-
   User? get currentUser => _client.auth.currentUser;
 
   Future<AuthResponse> googleSignIn() async {
@@ -48,10 +45,7 @@ class SupabaseService {
     await _client.auth.signOut();
   }
 
-  // ==========================
   // PROFILE SECTION
-  // ==========================
-
   Future<void> createProfileIfNotExists() async {
     final user = currentUser;
     if (user == null) return;
@@ -106,13 +100,8 @@ class SupabaseService {
     await _client.from('profiles').update(data).eq('id', user.id);
   }
 
-  // ==========================
   // POSTS SECTION
-  // ==========================
-
-  // --------------------------
   // Create post with optional image
-  // --------------------------
   Future<void> createPost({
     required String title,
     required String content,
@@ -154,9 +143,7 @@ class SupabaseService {
         .eq('user_id', user.id); // Security: ensure user owns the post
   }
 
-  // --------------------------
   // Fetch posts
-  // --------------------------
   Future<List<dynamic>> fetchPosts() async {
     return await _client
         .from('posts')
@@ -172,9 +159,7 @@ class SupabaseService {
     await _client.from('posts').delete().eq('id', postId);
   }
 
-  // --------------------------
   // Upload image to Supabase Storage
-  // --------------------------
   Future<String?> uploadImage(File file, String path) async {
     try {
       final response = await _client.storage.from('posts_images').upload(
@@ -198,10 +183,7 @@ class SupabaseService {
     }
   }
 
-  // ==========================
   // COMMENTS SECTION
-  // ==========================
-
   Future<List<dynamic>> fetchComments(String postId) async {
     return await _client
         .from('comments')
@@ -225,10 +207,7 @@ class SupabaseService {
     await _client.from('comments').delete().eq('id', commentId);
   }
 
-  // ==========================
   // LIKE SECTION
-  // ==========================
-
   Future<bool> isPostLiked(String postId) async {
     final user = _client.auth.currentUser;
     if (user == null) return false;
@@ -275,7 +254,7 @@ class SupabaseService {
     final user = _client.auth.currentUser;
     if (user == null) return [];
 
-    // We select from 'likes', then reach into 'posts',
+    // select from 'likes', then reach into 'posts',
     // then reach into 'profiles' (the owner) and 'likes' (the count)
     final response = await _client
         .from('likes')

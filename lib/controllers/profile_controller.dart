@@ -31,10 +31,7 @@ class ProfileController extends GetxController {
 
   String get currentUid => _service.currentUser?.id ?? "";
 
-  // ==========================
   // Data Loading
-  // ==========================
-
   Future<void> initialLoad() async {
     await loadProfile();
     await fetchLikedPosts();
@@ -130,10 +127,7 @@ class ProfileController extends GetxController {
     }
   }
 
-  // ==========================
   // Profile Actions
-  // ==========================
-
   Future<void> updateProfile() async {
     String newName = nameController.text.trim();
     if (newName.isEmpty) {
@@ -171,10 +165,7 @@ class ProfileController extends GetxController {
     }
   }
 
-  // ==========================
   // HARDWARE INTEGRATION (Camera/Gallery)
-  // ==========================
-
   Future<void> updateAvatar(ImageSource source) async {
     try {
       final XFile? image = await _picker.pickImage(source: source, imageQuality: 50, maxWidth: 400);
@@ -205,10 +196,7 @@ class ProfileController extends GetxController {
     }
   }
 
-  // ==========================
   // Authentication
-  // ==========================
-
   Future<void> logout() async {
     try {
       await _service.signOut();

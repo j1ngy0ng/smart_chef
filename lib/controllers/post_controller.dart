@@ -21,20 +21,14 @@ class PostController extends GetxController {
     apiKey: 'AIzaSyB5z8_MWyKlNxItApAAZRrARylVLOZDmhc',
   );
 
-  // ==========================
   // Text Controllers
-  // ==========================
   final titleController = TextEditingController();
   final contentController = TextEditingController();
 
-  // ==========================
   // Image
-  // ==========================
   Rx<File?> selectedImage = Rx<File?>(null);
 
-  // ==========================
   // Posts state
-  // ==========================
   var posts = <PostModel>[].obs;
   var isLoading = false.obs;
 
@@ -54,9 +48,7 @@ class PostController extends GetxController {
     }).toList();
   }
 
-  // ==========================
   // Init
-  // ==========================
   @override
   void onInit() {
     super.onInit();
@@ -65,9 +57,7 @@ class PostController extends GetxController {
     startShakeListener();
   }
 
-  // ==========================
   // HYBRID FETCH: SQLite + Supabase
-  // ==========================
   Future<void> fetchPosts({bool showError = true}) async {
     try {
       isLoading.value = true;
@@ -101,7 +91,7 @@ class PostController extends GetxController {
     } catch (e) {
       debugPrint("Offline mode or Fetch Error: $e");
 
-      // OPTIONAL: Nice touch for your tutor to prove offline mode
+      // prove offline mode
       if (showError) {
         Get.snackbar(
           "Offline Mode",
@@ -125,7 +115,7 @@ class PostController extends GetxController {
   List<PostModel> get myPosts {
     final currentUid = _service.currentUser?.id;
     if (currentUid == null) return [];
-    // We use .where to filter posts belonging to the logged-in user
+    // to filter posts belonging to the logged-in user
     return posts.where((p) => p.user.id == currentUid).toList();
   }
 
@@ -140,7 +130,7 @@ class PostController extends GetxController {
         content: contentController.text.trim(),
       );
 
-      // This triggers the hybrid fetch (updates Remote, then saves to Local)
+      //  triggers hybrid fetch (updates Remote, then saves to Local)
       await fetchPosts();
 
       // Clear inputs for the next time the user opens the screen
@@ -153,10 +143,7 @@ class PostController extends GetxController {
     }
   }
 
-  // ==========================
   // Pick image
-  // ==========================
-
   Future<void> pickImage(ImageSource source) async {
     final ImagePicker picker = ImagePicker();
 
@@ -167,9 +154,7 @@ class PostController extends GetxController {
     }
   }
 
-  // ==========================
   // Submit post
-  // ==========================
   Future<void> submitPost() async {
     if (titleController.text.isEmpty || contentController.text.isEmpty) {
       Get.snackbar("Error", "Please fill all fields", snackPosition: SnackPosition.BOTTOM);
@@ -335,7 +320,7 @@ class PostController extends GetxController {
         currentLikeCount.value++;
 
         // SYNC: Add to profile list
-        // Find the post object from our main list
+        // Find the post object from main list
         final likedPost = posts.firstWhereOrNull((p) => p.id == postId);
         if (likedPost != null) {
           // Create a copy with the liked status set to true
@@ -383,17 +368,13 @@ class PostController extends GetxController {
     }
   }
 
-  // ==========================
   // Shake to Shuffle State
-  // ==========================
   StreamSubscription? _shakeSubscription;
   DateTime _lastShake = DateTime.now();
 
-  // ==========================
   // Shake Logic
-  // ==========================
   void startShakeListener() {
-    // If we already have a subscription, don't create another one
+    // If already have a subscription, don't create another one
     if (_shakeSubscription != null) return;
 
     // Listen to accelerometer events
@@ -411,7 +392,7 @@ class PostController extends GetxController {
   }
 
   void _showRandomRecipe() {
-    // Only show if we actually have posts to shuffle
+    // Only show if actually have posts to shuffle
     if (posts.isEmpty) return;
 
     // 1. Give the user tactile feedback (Mobile Unique Feature!)
@@ -420,7 +401,7 @@ class PostController extends GetxController {
     // 2. Select a random post from the list
     final randomPost = (List<PostModel>.from(posts)..shuffle()).first;
 
-    // 3. Show the "Surprise" Dialog
+    // 3. Show the Surprise Dialog
     Get.defaultDialog(
       title: "Chef's Surprise! 🎲",
       titleStyle: const TextStyle(fontWeight: FontWeight.bold),
@@ -433,7 +414,7 @@ class PostController extends GetxController {
       onConfirm: () {
         Get.back(); // Close dialog
 
-        // This is the line that handles the jump to the recipe
+        // the jump to the recipe
         Get.to(() => PostDetailScreen(post: randomPost));
       },
       textCancel: "Try Again",
