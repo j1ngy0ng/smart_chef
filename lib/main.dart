@@ -15,8 +15,10 @@ Future<void> main() async {
   await Supabase.initialize(
     url: 'https://onpgamhynuwavemaskqy.supabase.co',
     anonKey: 'sb_publishable_EDvi6-MQTfeM9NWQvVZDXg_kIhcDpCu',
+    authOptions: const FlutterAuthClientOptions(
+      autoRefreshToken: true,
+    ),
   );
-
   // Initialize SQLite
   await LocalDbService().database;
 
