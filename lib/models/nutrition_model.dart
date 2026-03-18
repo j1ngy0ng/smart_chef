@@ -78,6 +78,7 @@ class UserGoals {
   final bool isLowCarb;
   final bool isHighProtein;
   final bool isKeto;
+  final int stepGoal;
 
   UserGoals({
     required this.userId,
@@ -91,6 +92,7 @@ class UserGoals {
     this.isLowCarb = false,
     this.isHighProtein = false,
     this.isKeto = false,
+    this.stepGoal = 10000,
   });
 
   factory UserGoals.fromMap(Map<String, dynamic> map) {
@@ -106,11 +108,15 @@ class UserGoals {
       isLowCarb: map['is_low_carb'] ?? false,
       isHighProtein: map['is_high_protein'] ?? false,
       isKeto: map['is_keto'] ?? false,
+      stepGoal: (map['step_goal'] as num?)?.toInt() ?? 10000,
     );
   }
 
   // Default fallback when no DB record exists
-  factory UserGoals.defaults(String userId) => UserGoals(userId: userId);
+  factory UserGoals.defaults(String userId) => UserGoals(
+    userId: userId,
+    stepGoal: 10000,
+  );
 
   Map<String, dynamic> toMap() => {
     'user_id': userId,
@@ -124,6 +130,7 @@ class UserGoals {
     'is_low_carb': isLowCarb,
     'is_high_protein': isHighProtein,
     'is_keto': isKeto,
+    'step_goal': stepGoal,
   };
 }
 
@@ -160,10 +167,9 @@ class DailyHealthData {
 
   factory DailyHealthData.empty(String userId) => DailyHealthData(
     userId: userId,
-    steps: 6842, // mock data for UI dev
-    caloriesBurned: 380,
-    waterIntake: 5,
-    heartRate: 72,
+    steps: 0,
+    caloriesBurned: 0,
+    waterIntake: 0,
     recordedAt: DateTime.now(),
   );
 }

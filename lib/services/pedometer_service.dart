@@ -1,0 +1,122 @@
+// lib/services/pedometer_service.dart
+// Real-time step tracking using phone's built-in accelerometer sensor.
+// Works on any Android device — no HMS Core or Google Fit required.
+// Uses: pedometer ^4.0.0
+
+import 'dart:async';
+import 'package:pedometer/pedometer.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+class PedometerService {
+  // Streams
+  static StreamSubscription<StepCount>? _stepCountSubscription;
+  static StreamSubscription<PedestrianStatus>? _pedestrianStatusSubscription;
+
+  // Current values
+  static int _todaySteps = 0;
+  static int _stepCountAtMidnight = 0; // baseline to calculate today's steps
+  static String _status = 'unknown'; // 'walking' | 'stopped' | 'unknown'
+
+  // Callbacks — set these to update your UI
+  static void Function(int steps)? onStepsUpdated;
+  static void Function(String status)? onStatusUpdated;
+
+  // ── Request permission ─────────────────────────────────────────────────────
+  static Future<bool> requestPermission() async {
+    final status = await Permission.activityRecognition.request();
+    return status.isGranted;
+  }
+
+  // ── Start listening ────────────────────────────────────────────────────────
+  static Future<void> startListening({
+    void Function(int steps)? stepsCallback,
+    void Function(String status)? statusCallback,
+  }) async {
+    onStepsUpdated  = stepsCallback;
+    onStatusUpdated = statusCallback;
+
+    final granted = await requestPermission();
+    if (!granted) {
+      debugLog('Activity recognition permission denied');
+      return;
+    }
+
+    // Step count stream — gives total steps since last reboot
+    _stepCountSubscription = Pedometer.stepCountStream.listen(
+      _onStepCount,
+      onError: _onStepCountError,
+      cancelOnError: false,
+    );
+
+    // Pedestrian status stream — 'walking' or 'stopped'
+    _pedestrianStatusSubscription = Pedometer.pedestrianStatusStream.listen(
+      _onPedestrianStatus,
+      onError: _onPedestrianStatusError,
+      cancelOnError: false,
+    );
+
+    debugLog('Pedometer started listening');
+  }
+
+  // ── Stop listening ─────────────────────────────────────────────────────────
+  static void stopListening() {
+    _stepCountSubscription?.cancel();
+    _pedestrianStatusSubscription?.cancel();
+    _stepCountSubscription = null;
+    _pedestrianStatusSubscription = null;
+    debugLog('Pedometer stopped');
+  }
+
+  // ── Step count handler ─────────────────────────────────────────────────────
+  // pedometer gives cumulative steps since reboot — we track delta from start
+  static void _onStepCount(StepCount event) {
+    final totalSinceReboot = event.steps;
+
+    // First reading — set baseline
+    if (_stepCountAtMidnight == 0) {
+      _stepCountAtMidnight = totalSinceReboot;
+      debugLog('Baseline set: $totalSinceReboot steps since reboot');
+    }
+
+    _todaySteps = totalSinceReboot - _stepCountAtMidnight;
+    if (_todaySteps < 0) _todaySteps = 0; // handles device restart edge case
+
+    debugLog('Steps today: $_todaySteps');
+    onStepsUpdated?.call(_todaySteps);
+  }
+
+  static void _onStepCountError(dynamic error) {
+    debugLog('Step count error: $error');
+    onStepsUpdated?.call(0);
+  }
+
+  // ── Pedestrian status handler ──────────────────────────────────────────────
+  static void _onPedestrianStatus(PedestrianStatus event) {
+    _status = event.status; // 'walking' or 'stopped'
+    debugLog('Status: $_status');
+    onStatusUpdated?.call(_status);
+  }
+
+  static void _onPedestrianStatusError(dynamic error) {
+    debugLog('Pedestrian status error: $error');
+    onStatusUpdated?.call('unknown');
+  }
+
+  // ── Getters ────────────────────────────────────────────────────────────────
+  static int   get todaySteps => _todaySteps;
+  static String get status    => _status;
+
+  // Estimate calories burned from steps
+  // Formula: steps × 0.04 kcal (average for 70kg person)
+  static double get estimatedCaloriesBurned =>
+      (_todaySteps * 0.04).roundToDouble();
+
+  // ── Debug logger ───────────────────────────────────────────────────────────
+  static void debugLog(String msg) {
+    assert(() {
+      // ignore: avoid_print
+      print('=== PEDOMETER: $msg ===');
+      return true;
+    }());
+  }
+}

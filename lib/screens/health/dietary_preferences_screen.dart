@@ -1,11 +1,3 @@
-// screens/health/dietary_preferences_screen.dart
-// Dietary Preferences Screen
-// Features:
-//   - 5 diet type toggles (Vegetarian, Vegan, Low Carb, High Protein, Keto)
-//   - Daily calorie goal input
-//   - Interactive macro ratio sliders with real-time % display
-//   - Saves to Supabase via NutritionController.saveGoals()
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -51,6 +43,8 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
   double get _carbsGoalG   => (_calorieGoal * _carbsRatio   / 4).roundToDouble();
   double get _fatGoalG     => (_calorieGoal * _fatRatio     / 9).roundToDouble();
 
+  int _stepGoal = 10000;
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +80,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
       isLowCarb:    _isLowCarb,
       isHighProtein: _isHighProtein,
       isKeto:       _isKeto,
+      stepGoal: _stepGoal,
     );
     await _ctrl.saveGoals(newGoals);
     // Subtle confirmation — no snackbar spam
@@ -102,6 +97,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
     _isHighProtein  = g.isHighProtein;
     _isKeto         = g.isKeto;
     _calCtrl.text   = g.calorieGoal.toInt().toString();
+    _stepGoal = _ctrl.goals.value?.stepGoal ?? 10000;
 
     // Derive ratios from saved gram goals
     final totalCal = g.proteinGoal * 4 + g.carbsGoal * 4 + g.fatGoal * 9;
@@ -245,6 +241,8 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
               children: [
                 _buildCalorieCard(),
                 const SizedBox(height: 16),
+                _buildStepGoalCard(),
+                const SizedBox(height: 16),
                 _buildDietTypesCard(),
                 const SizedBox(height: 16),
                 _buildMacroSlidersCard(),
@@ -283,13 +281,10 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Dietary Preferences',
+                Text('Goals',
                     style: TextStyle(
                         fontSize: 20, fontWeight: FontWeight.w800,
                         color: _C.text1, letterSpacing: -0.3)),
-                Text('Personalise your nutrition goals',
-                    style: TextStyle(fontSize: 12, color: _C.primary,
-                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -760,6 +755,89 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
           borderRadius: BorderRadius.circular(13),
         ),
         child: Icon(icon, color: _C.primary, size: 22),
+      ),
+    );
+  }
+
+  Widget _buildStepGoalCard() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _cardHeader('Daily Step Goal', 'steps / day'),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _stepBtn(Icons.remove_rounded, () {
+                final newVal = (_stepGoal - 500).clamp(1000, 50000);
+                setState(() => _stepGoal = newVal);
+                _triggerSave();
+              }),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: _C.bg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _C.steps.withOpacity(0.3)),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _stepGoal.toString(),
+                      style: const TextStyle(
+                          fontSize: 22, fontWeight: FontWeight.w800,
+                          color: _C.text1),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              _stepBtn(Icons.add_rounded, () {
+                final newVal = (_stepGoal + 500).clamp(1000, 50000);
+                setState(() => _stepGoal = newVal);
+                _triggerSave();
+              }),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Quick presets
+          Row(
+            children: [5000, 7500, 10000, 12500, 15000].map((s) =>
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _stepGoal = s);
+                        _triggerSave();
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 7),
+                        decoration: BoxDecoration(
+                          color: _stepGoal == s ? _C.steps : _C.bg,
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(
+                            color: _stepGoal == s ? _C.steps : _C.divider,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            s >= 1000 ? '${s ~/ 1000}k' : '$s',
+                            style: TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.w700,
+                                color: _stepGoal == s ? Colors.white : _C.text2),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ).toList(),
+          ),
+        ],
       ),
     );
   }

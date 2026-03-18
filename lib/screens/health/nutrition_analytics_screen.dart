@@ -103,10 +103,28 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
         }
       }
 
-      // Mock burned calories (replace with real health_data query if available)
-      final rand = math.Random(42);
+      final healthRawData = await _client
+          .from('health_data')
+          .select('calories_burned, recorded_at')
+          .eq('user_id', _userId)
+          .gte('recorded_at', DateTime(start.year, start.month, start.day).toIso8601String())
+          .lte('recorded_at', DateTime(end.year, end.month, end.day, 23, 59, 59).toIso8601String())
+          .order('recorded_at', ascending: true);
+
+      final Map<String, double> burnedByDay = {};
+      for (final row in healthRawData as List) {
+        final date = DateTime.tryParse(row['recorded_at'] ?? '');
+        if (date == null) continue;
+        final key = _dateKey(date);
+        final burned = (row['calories_burned'] as num?)?.toDouble() ?? 0;
+        // Keep the highest value for the day (latest pedometer reading)
+        if (!burnedByDay.containsKey(key) || burned > burnedByDay[key]!) {
+          burnedByDay[key] = burned;
+        }
+      }
+
       for (final d in byDay.values) {
-        d.burned = 250 + rand.nextInt(300).toDouble();
+        d.burned = burnedByDay[_dateKey(d.date)] ?? 0;
       }
 
       // Recent logs (last 10, newest first)
@@ -142,7 +160,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
       final d = now.subtract(Duration(days: days - 1 - i));
       return _DayData(date: d)
         ..calories = 1200 + rand.nextInt(900).toDouble()
-        ..burned = 250 + rand.nextInt(300).toDouble()
+        ..burned = 0
         ..protein = 80 + rand.nextInt(70).toDouble()
         ..carbs = 150 + rand.nextInt(100).toDouble()
         ..fat = 40 + rand.nextInt(40).toDouble();

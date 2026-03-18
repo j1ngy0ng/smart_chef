@@ -1,10 +1,9 @@
-// controllers/nutrition_controller.dart
-// Follows exact same GetX pattern as your existing:
-// auth_controller.dart / post_controller.dart / profile_controller.dart
+import 'dart:async';
 
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/nutrition_model.dart';
+import '../services/pedometer_service.dart';
 
 class NutritionController extends GetxController {
   final SupabaseClient _client = Supabase.instance.client;
@@ -40,6 +39,10 @@ class NutritionController extends GetxController {
   final RxDouble carbsGoal   = 250.0.obs;
   final RxDouble fatGoal     = 65.0.obs;
   final RxInt    waterGoal   = 8.obs;
+  final RxString pedestrianStatus = 'unknown'.obs;
+  final RxInt stepGoal = 10000.obs;
+
+  Timer? _midnightTimer;
 
   double get calorieProgress => (totalCalories.value / calorieGoal.value).clamp(0.0, 1.0);
   double get proteinProgress => (totalProtein.value / proteinGoal.value).clamp(0.0, 1.0);
@@ -55,11 +58,19 @@ class NutritionController extends GetxController {
   void onInit() {
     super.onInit();
     loadDashboard();
+    _startPedometer();
+    _scheduleMidnightReset();
   }
 
   // ─── Main Loader ─────────────────────────────────────────────────────────────
   Future<void> loadDashboard() async {
     if (userId.isEmpty) return;
+
+    // Silently refresh session if expired
+    try {
+      await Supabase.instance.client.auth.refreshSession();
+    } catch (_) {}  // ignore — if it fails user needs to re-login
+
     isLoading.value = true;
     try {
       await Future.wait([
@@ -73,6 +84,50 @@ class NutritionController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void _startPedometer() {
+    PedometerService.startListening(
+      stepsCallback: (steps) {
+        // Update health data reactively
+        healthData.value = DailyHealthData(
+          userId: userId,
+          steps: steps,
+          caloriesBurned: PedometerService.estimatedCaloriesBurned,
+          waterIntake: waterGlasses.value,
+          source: 'pedometer',
+          recordedAt: DateTime.now(),
+        );
+      },
+      statusCallback: (status) {
+        pedestrianStatus.value = status;
+      },
+    );
+  }
+
+  void _scheduleMidnightReset() {
+    _midnightTimer?.cancel();
+
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1); // next midnight
+    final timeUntilMidnight = midnight.difference(now);
+
+    _midnightTimer = Timer(timeUntilMidnight, () {
+      // Reset water to 0 at midnight
+      waterGlasses.value = 0;
+      healthData.value = DailyHealthData(
+        userId: userId,
+        steps: 0,
+        caloriesBurned: 0,
+        waterIntake: 0,
+        source: 'manual',
+        recordedAt: DateTime.now(),
+      );
+      // Reload fresh data for the new day
+      loadDashboard();
+      // Schedule next midnight reset
+      _scheduleMidnightReset();
+    });
   }
 
   // ─── Goals ───────────────────────────────────────────────────────────────────
@@ -94,6 +149,7 @@ class NutritionController extends GetxController {
       carbsGoal.value   = g.carbsGoal;
       fatGoal.value     = g.fatGoal;
       waterGoal.value   = g.waterGoal;
+      stepGoal.value = g.stepGoal;
     } catch (e) {
       final g = UserGoals.defaults(userId);
       goals.value       = g;
@@ -102,6 +158,7 @@ class NutritionController extends GetxController {
       carbsGoal.value   = g.carbsGoal;
       fatGoal.value     = g.fatGoal;
       waterGoal.value   = g.waterGoal;
+      stepGoal.value = g.stepGoal;
     }
   }
 
@@ -118,6 +175,7 @@ class NutritionController extends GetxController {
       carbsGoal.value   = newGoals.carbsGoal;
       fatGoal.value     = newGoals.fatGoal;
       waterGoal.value   = newGoals.waterGoal;
+      stepGoal.value = newGoals.stepGoal;
     } catch (e) {
       _handleError('saveGoals', e);
     } finally {
@@ -213,9 +271,36 @@ class NutritionController extends GetxController {
   // ─── Health Data ─────────────────────────────────────────────────────────────
   Future<void> _loadHealthData() async {
     try {
+      // Load last saved data from Supabase as initial value
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
+      final data = await _client
+          .from('health_data')
+          .select()
+          .eq('user_id', userId)
+          .gte('recorded_at', startOfDay.toIso8601String())
+          .order('recorded_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
 
+      if (data != null) {
+        healthData.value = DailyHealthData.fromMap(data);
+        waterGlasses.value = healthData.value!.waterIntake;
+      } else {
+        healthData.value = DailyHealthData.empty(userId);
+        waterGlasses.value = healthData.value!.waterIntake;
+      }
+      // Pedometer will override steps/calories live via _startPedometer()
+    } catch (e) {
+      healthData.value = DailyHealthData.empty(userId);
+      waterGlasses.value = 5;
+    }
+  }
+
+  Future<void> _loadHealthDataFromSupabase() async {
+    try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
       final data = await _client
           .from('health_data')
           .select()
@@ -248,8 +333,9 @@ class NutritionController extends GetxController {
         'water_intake': count,
         'steps': healthData.value?.steps ?? 0,
         'calories_burned': healthData.value?.caloriesBurned ?? 0,
+        'source': healthData.value?.source ?? 'manual',
         'recorded_at': startOfDay.toIso8601String(),
-      });
+      }, onConflict: 'user_id, recorded_at');
     } catch (e) {
       // Silent fail — UI already updated optimistically
     }
@@ -314,5 +400,12 @@ class NutritionController extends GetxController {
       e.toString(),
       snackPosition: SnackPosition.TOP,
     );
+  }
+
+  @override
+  void onClose() {
+    _midnightTimer?.cancel();
+    PedometerService.stopListening();
+    super.onClose();
   }
 }

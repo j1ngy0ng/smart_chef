@@ -404,7 +404,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Diet Goals',
+                      Text('Edit Goals',
                           style: TextStyle(fontSize: 13,
                               fontWeight: FontWeight.w700, color: _C.text1)),
                       Text('Preferences',
@@ -703,12 +703,13 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
             (i) => Expanded(child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  final newVal =
-                  i < _ctrl.waterGlasses.value ? i : i + 1;
-                  _ctrl.setWaterGlasses(newVal);
-                },
+              onTap: () {
+                HapticFeedback.lightImpact();
+                // Only allow increasing — tapping a filled glass does nothing
+                if (i >= _ctrl.waterGlasses.value) {
+                  _ctrl.setWaterGlasses(i + 1);
+                }
+              },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 280),
                   curve: Curves.elasticOut,
@@ -726,7 +727,12 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                           blurRadius: 6,
                           offset: const Offset(0, 2))
                     ]
-                        : null,
+                        : [
+                      const BoxShadow(
+                          color: Colors.transparent,
+                          blurRadius: 0,
+                          offset: Offset(0, 0))
+                    ],
                   ),
                   child: Icon(
                     Icons.water_drop_rounded,
@@ -765,8 +771,12 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
   Widget _buildActivityRow() {
     return Obx(() {
       final h = _ctrl.healthData.value;
-      final steps = h?.steps ?? 6842;
-      final burned = h?.caloriesBurned ?? 380;
+      final steps = h?.steps ?? 0;
+      final burned = h?.caloriesBurned ?? 0;
+      final source = h?.source ?? 'manual';
+      final badge = source == 'huawei_health' ? 'Huawei Health'
+          : source == 'google_fit'    ? 'Google Fit'
+          : 'Manual';
 
       return Row(
         children: [
@@ -776,9 +786,9 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
               color: _C.steps,
               title: 'Steps',
               value: '${(steps / 1000).toStringAsFixed(1)}k',
-              sub: 'Goal: 10k',
-              progress: (steps / 10000).clamp(0.0, 1.0),
-              badge: 'Google Fit',
+              sub: 'Goal: ${(_ctrl.stepGoal.value / 1000).toStringAsFixed(1)}k',
+              progress: (steps / _ctrl.stepGoal.value).clamp(0.0, 1.0),
+              badge: 'Pedometer',
             ),
           ),
           const SizedBox(width: 14),
@@ -790,7 +800,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
               value: '${burned.toInt()}',
               sub: 'kcal active',
               progress: (burned / 500).clamp(0.0, 1.0),
-              badge: 'Active',
+              badge: _ctrl.pedestrianStatus.value == 'walking' ? '🚶 Walking' : '⏸ Stopped',
             ),
           ),
         ],
