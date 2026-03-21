@@ -159,7 +159,6 @@ class DailyHealthData {
       steps: (map['steps'] as num?)?.toInt() ?? 0,
       caloriesBurned: (map['calories_burned'] as num?)?.toDouble() ?? 0,
       waterIntake: (map['water_intake'] as num?)?.toInt() ?? 0,
-      heartRate: (map['heart_rate'] as num?)?.toInt(),
       source: map['source'] ?? 'manual',
       recordedAt: DateTime.tryParse(map['recorded_at'] ?? '') ?? DateTime.now(),
     );

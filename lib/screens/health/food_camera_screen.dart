@@ -97,7 +97,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
           'Something went wrong. Please try again.',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red.withOpacity(0.8),
-          colorText: Colors.white,
+          colorText: Colors.black,
         );
         return;
       }
@@ -113,7 +113,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
           'No food detected in the photo. Please take a photo of food.',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.orange.withOpacity(0.8),
-          colorText: Colors.white,
+          colorText: Colors.black,
           duration: const Duration(seconds: 3),
         );
         return;
@@ -130,7 +130,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
           'Image is too blurry or dark. Try better lighting.',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.orange.withOpacity(0.8),
-          colorText: Colors.white,
+          colorText: Colors.black,
           duration: const Duration(seconds: 3),
         );
         return;
@@ -151,7 +151,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
           'Could not identify the food. Try a clearer photo.',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red.withOpacity(0.8),
-          colorText: Colors.white,
+          colorText: Colors.black,
         );
       }
 
@@ -165,7 +165,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         e.toString(),
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
+        colorText: Colors.black,
       );
     }
   }
@@ -200,7 +200,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         Get.snackbar('❌ Analysis Failed', 'Something went wrong. Please try again.',
             snackPosition: SnackPosition.TOP,
             backgroundColor: Colors.red.withOpacity(0.8),
-            colorText: Colors.white);
+            colorText: Colors.black);
         return;
       }
 
@@ -212,7 +212,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         Get.snackbar('🚫 Not Food', 'No food detected. Please select a food photo.',
             snackPosition: SnackPosition.TOP,
             backgroundColor: Colors.orange.withOpacity(0.8),
-            colorText: Colors.white,
+            colorText: Colors.black,
             duration: const Duration(seconds: 3));
         return;
       }
@@ -225,7 +225,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         Get.snackbar('📷 Unclear Photo', 'Image is too blurry or dark.',
             snackPosition: SnackPosition.TOP,
             backgroundColor: Colors.orange.withOpacity(0.8),
-            colorText: Colors.white,
+            colorText: Colors.black,
             duration: const Duration(seconds: 3));
         return;
       }
@@ -242,7 +242,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         Get.snackbar('❌ Unknown Food', 'Could not identify the food.',
             snackPosition: SnackPosition.TOP,
             backgroundColor: Colors.red.withOpacity(0.8),
-            colorText: Colors.white);
+            colorText: Colors.black);
       }
     } catch (e) {
       setState(() {
@@ -265,7 +265,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF0A0A0A), Color(0xFF1A1A2E)],
+                colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
               ),
             ),
           ),
@@ -277,23 +277,14 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  GestureDetector(
-                    onTap: () => Get.back(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.close_rounded,
-                          color: Colors.white, size: 22),
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () => Get.back(),
                   ),
                   const Text(
                     'AI Food Scanner',
                     style: TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 16,
                         fontWeight: FontWeight.w700),
                   ),
@@ -346,7 +337,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
                   _statusText,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      color: Colors.white70,
+                      color: Colors.black,
                       fontSize: 15,
                       fontWeight: FontWeight.w500),
                 ),
@@ -354,9 +345,9 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
                 const SizedBox(height: 8),
 
                 const Text(
-                  'Gemini AI will identify the food\nand estimate its calories & macros',
+                  'Smart Chef AI will identify the food\nand estimate its calories & macros',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white38, fontSize: 13),
+                  style: TextStyle(color: Colors.black, fontSize: 13),
                 ),
 
                 const SizedBox(height: 48),
@@ -383,7 +374,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.camera_alt_rounded,
-                              color: Colors.white, size: 20),
+                              color: Colors.black, size: 20),
                           SizedBox(width: 10),
                           Text(
                             'Take Photo',
@@ -403,18 +394,18 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        border: Border.all(color: _C.primary),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.photo_library_rounded, color: Colors.white, size: 20),
+                          Icon(Icons.photo_library_rounded, color: Colors.black, size: 20),
                           SizedBox(width: 10),
                           Text('Choose from Gallery',
                               style: TextStyle(
-                                  color: Colors.white,
+                                  color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600)),
                         ],
@@ -432,24 +423,15 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
             left: 0,
             right: 0,
             child: Center(
-              child: GestureDetector(
-                onTap: () => Get.back(),
-                child: Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border:
-                    Border.all(color: Colors.white.withOpacity(0.2)),
-                  ),
-                  child: const Text(
-                    'Enter manually instead',
-                    style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600),
-                  ),
+              child: TextButton.icon(
+                onPressed: () => Get.back(),
+                icon: const Icon(Icons.edit_rounded, color: Colors.black, size: 16),
+                label: const Text(
+                  'Enter manually instead',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ),

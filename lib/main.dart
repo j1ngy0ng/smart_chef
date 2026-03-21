@@ -45,7 +45,7 @@ class SmartChefApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'SmartChef',
       theme: ThemeData(
-        primaryColor: const Color(0xFF4CAF50),
+        primaryColor: const Color(0xFF00A676),
         colorScheme: ColorScheme.fromSwatch()
             .copyWith(secondary: const Color(0xFFFF9800)),
       ),

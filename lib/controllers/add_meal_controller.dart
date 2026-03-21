@@ -1,13 +1,11 @@
-// controllers/add_meal_controller.dart
-// GetX controller for Add/Edit Meal screen.
-// Follows the exact same pattern as your existing controllers.
-// Uses NutritionController to refresh the dashboard after saving.
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/nutrition_model.dart';
 import '../models/food_item_model.dart';
+import '../services/gemini_service.dart';
 import 'nutrition_controller.dart';
 import '../screens/health/food_camera_screen.dart';
 
@@ -21,19 +19,11 @@ class AddMealController extends GetxController {
   final RxBool isSaving = false.obs;
   final RxBool isScanning = false.obs;
 
-  // Search results
   final RxList<FoodItem> searchResults = <FoodItem>[].obs;
-
-  // Cart — items added to this meal session
   final RxList<MealCartItem> cartItems = <MealCartItem>[].obs;
-
-  // Edit mode — if non-null, we're editing an existing log entry
   final Rx<NutritionLog?> editingLog = Rx<NutritionLog?>(null);
 
-  // Text controller for search field
   final TextEditingController searchController = TextEditingController();
-
-  // Debounce timer for search
   Worker? _searchDebounce;
 
   // ─── Computed ─────────────────────────────────────────────────────────────────
@@ -49,8 +39,6 @@ class AddMealController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-
-    // Debounce search: waits 400ms after last keystroke
     _searchDebounce = debounce(
       searchQuery,
           (_) => _runSearch(),
@@ -65,8 +53,7 @@ class AddMealController extends GetxController {
     super.onClose();
   }
 
-  // ─── Edit mode initialiser ────────────────────────────────────────────────────
-  /// Call this when opening the screen to EDIT an existing NutritionLog
+  // ─── Edit mode ────────────────────────────────────────────────────────────────
   void initEditMode(NutritionLog log) {
     editingLog.value = log;
     selectedMealType.value = log.mealType;
@@ -100,45 +87,6 @@ class AddMealController extends GetxController {
     searchResults.clear();
   }
 
-  Future<void> _runSearch() async {
-    final q = searchQuery.value.trim();
-    if (q.isEmpty) {
-      searchResults.clear();
-      return;
-    }
-
-    isSearching.value = true;
-    try {
-      // Try Supabase food_items table first
-      final data = await _client
-          .from('food_items')
-          .select()
-          .ilike('name', '%$q%')
-          .limit(20);
-
-      searchResults.value =
-          (data as List).map((e) => FoodItem.fromMap(e)).toList();
-
-      // Fall back to mock data if table empty or missing
-      if (searchResults.isEmpty) {
-        searchResults.value = FoodItem.mockFoods()
-            .where((f) =>
-        f.name.toLowerCase().contains(q.toLowerCase()) ||
-            f.brand.toLowerCase().contains(q.toLowerCase()))
-            .toList();
-      }
-    } catch (_) {
-      // DB not set up yet — use local mock
-      searchResults.value = FoodItem.mockFoods()
-          .where((f) =>
-      f.name.toLowerCase().contains(q.toLowerCase()) ||
-          f.brand.toLowerCase().contains(q.toLowerCase()))
-          .toList();
-    } finally {
-      isSearching.value = false;
-    }
-  }
-
   Future<void> scanBarcode() async {
     isScanning.value = true;
     try {
@@ -149,27 +97,89 @@ class AddMealController extends GetxController {
 
       if (foodData != null && foodData.isNotEmpty) {
         final estimatedGrams = (foodData['estimated_grams'] ?? 100).toDouble();
-
-        // Convert per_serving → per_100g for FoodItem storage
         final factor = estimatedGrams > 0 ? (100 / estimatedGrams) : 1.0;
+
+        final proteinPer100g = (foodData['protein_per_serving'] ?? 0).toDouble() * factor;
+        final carbsPer100g   = (foodData['carbs_per_serving']   ?? 0).toDouble() * factor;
+        final fatPer100g     = (foodData['fat_per_serving']     ?? 0).toDouble() * factor;
+        final caloriesPer100g = (proteinPer100g * 4) + (carbsPer100g * 4) + (fatPer100g * 9);
 
         final food = FoodItem(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           name: foodData['food_name'] ?? 'Unknown Food',
-          caloriesPer100g: (foodData['calories_per_serving'] ?? 0).toDouble() * factor,
-          proteinPer100g:  (foodData['protein_per_serving']  ?? 0).toDouble() * factor,
-          carbsPer100g:    (foodData['carbs_per_serving']    ?? 0).toDouble() * factor,
-          fatPer100g:      (foodData['fat_per_serving']      ?? 0).toDouble() * factor,
+          caloriesPer100g: caloriesPer100g,
+          proteinPer100g:  proteinPer100g,
+          carbsPer100g:    carbsPer100g,
+          fatPer100g:      fatPer100g,
         );
-        addToCart(food, imagePath: foodData['image_path'],
-          imageUrl: foodData['image_url'],);
+        addToCart(food,
+            imagePath: foodData['image_path'],
+            imageUrl: foodData['image_url']);
 
-        // Set serving size to what Gemini estimated
         final cartId = cartItems.last.cartId;
         updateServing(cartId, estimatedGrams);
       }
     } finally {
       isScanning.value = false;
+    }
+  }
+
+  Future<void> _runSearch() async {
+    final q = searchQuery.value.trim();
+    if (q.isEmpty) { searchResults.clear(); return; }
+
+    isSearching.value = true;
+    try {
+      final data = await _client
+          .from('food_items')
+          .select()
+          .ilike('name', '%$q%')
+          .limit(20);
+
+      final supabaseResults =
+      (data as List).map((e) => FoodItem.fromMap(e)).toList();
+
+      if (supabaseResults.isNotEmpty) {
+        searchResults.value = supabaseResults;
+        return;
+      }
+
+      final geminiResult = await GeminiService.searchFoodNutrition(q);
+      if (geminiResult == null) { searchResults.value = []; return; }
+
+      final food = FoodItem(
+        id: '',
+        name: geminiResult['food_name'] ?? q,
+        brand: 'AI Estimated',
+        caloriesPer100g: (geminiResult['calories_per_100g'] as num?)?.toDouble() ?? 0,
+        proteinPer100g:  (geminiResult['protein_per_100g']  as num?)?.toDouble() ?? 0,
+        carbsPer100g:    (geminiResult['carbs_per_100g']    as num?)?.toDouble() ?? 0,
+        fatPer100g:      (geminiResult['fat_per_100g']      as num?)?.toDouble() ?? 0,
+      );
+
+      searchResults.value = [food];
+      await _cacheFoodToSupabase(food,
+          servingSize: (geminiResult['serving_size_g'] as num?)?.toDouble() ?? 100);
+    } catch (e) {
+      print('=== SEARCH ERROR: $e ===');
+      searchResults.value = [];
+    } finally {
+      isSearching.value = false;
+    }
+  }
+
+  Future<void> _cacheFoodToSupabase(FoodItem food, {double servingSize = 100}) async {
+    try {
+      await _client.from('food_items').insert({
+        'name':              food.name,
+        'brand':             food.brand,
+        'calories_per_100g': food.caloriesPer100g,
+        'protein_per_100g':  food.proteinPer100g,
+        'carbs_per_100g':    food.carbsPer100g,
+        'fat_per_100g':      food.fatPer100g,
+      });
+    } catch (e) {
+      print('=== CACHE ERROR: $e ===');
     }
   }
 
@@ -195,8 +205,27 @@ class AddMealController extends GetxController {
   void updateServing(String cartId, double grams) {
     final item = cartItems.firstWhereOrNull((i) => i.cartId == cartId);
     if (item == null) return;
+    // Clear any manual override so macros go back to being weight-based
+    item.clearMacroOverride();
     item.servingGrams.value = grams.clamp(1, 9999);
-    // cartItems.refresh() not needed — item.servingGrams is its own Rx
+    cartItems.refresh(); // trigger Obx rebuild for calories/protein/carbs/fat
+  }
+
+  /// Called when user manually edits P/C/F in the override fields.
+  /// Stores the values directly on the item and refreshes the list.
+  void updateMacros(String cartId, double protein, double carbs, double fat) {
+    final item = cartItems.firstWhereOrNull((i) => i.cartId == cartId);
+    if (item == null) return;
+    item.setMacroOverride(protein, carbs, fat);
+    cartItems.refresh(); // trigger Obx rebuild so bottom bar totals update
+  }
+
+  /// Called when user toggles back from manual mode to serving mode.
+  void clearMacroOverride(String cartId) {
+    final item = cartItems.firstWhereOrNull((i) => i.cartId == cartId);
+    if (item == null) return;
+    item.clearMacroOverride();
+    cartItems.refresh();
   }
 
   void removeFromCart(String cartId) {
@@ -205,7 +234,8 @@ class AddMealController extends GetxController {
 
   void toggleEditing(String cartId) {
     for (final item in cartItems) {
-      item.isEditing.value = (item.cartId == cartId) ? !item.isEditing.value : false;
+      item.isEditing.value =
+      (item.cartId == cartId) ? !item.isEditing.value : false;
     }
   }
 
@@ -220,21 +250,18 @@ class AddMealController extends GetxController {
     isSaving.value = true;
     try {
       if (editingLog.value != null) {
-        // UPDATE — single item edit mode
         await _updateLog();
       } else {
-        // INSERT — new meal with all cart items
         await _insertAllCartItems();
       }
 
-      // Refresh dashboard totals
       if (Get.isRegistered<NutritionController>()) {
         await Get.find<NutritionController>().loadDashboard();
       }
 
-      Get.back(); // Close screen
+      Get.back();
       Get.snackbar(
-        '✅ Meal Saved',
+        'Meal Saved',
         '${cartItems.length} item(s) logged to ${_mealLabel(selectedMealType.value)}.',
         snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFF4CAF50),
@@ -261,17 +288,16 @@ class AddMealController extends GetxController {
     final log = editingLog.value!;
     final item = cartItems.first;
     await _client.from('nutrition_logs').update({
-      'meal_type': selectedMealType.value,
-      'food_name': item.food.name,
-      'calories': item.calories,
-      'protein': item.protein,
-      'carbs': item.carbs,
-      'fat': item.fat,
+      'meal_type':   selectedMealType.value,
+      'food_name':   item.foodName.value,
+      'calories':    item.calories,
+      'protein':     item.protein,
+      'carbs':       item.carbs,
+      'fat':         item.fat,
       'serving_size': item.servingGrams.value,
     }).eq('id', log.id);
   }
 
-  // ─── Delete from DB (called from dashboard) ───────────────────────────────────
   Future<void> deleteLog(String logId) async {
     try {
       await _client.from('nutrition_logs').delete().eq('id', logId);
@@ -288,14 +314,12 @@ class AddMealController extends GetxController {
     }
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────────
   String _mealLabel(String type) {
     return const {
       'breakfast': 'Breakfast',
-      'lunch': 'Lunch',
-      'dinner': 'Dinner',
-      'snack': 'Snack',
-    }[type] ??
-        type;
+      'lunch':     'Lunch',
+      'dinner':    'Dinner',
+      'snack':     'Snack',
+    }[type] ?? type;
   }
 }

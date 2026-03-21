@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:ui';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/nutrition_model.dart';
 import '../services/pedometer_service.dart';
+import '../services/local_db_service.dart';
 
 class NutritionController extends GetxController {
   final SupabaseClient _client = Supabase.instance.client;
@@ -43,22 +47,30 @@ class NutritionController extends GetxController {
   final RxInt stepGoal = 10000.obs;
 
   Timer? _midnightTimer;
+  Timer? _stepSaveTimer;
 
   double get calorieProgress => (totalCalories.value / calorieGoal.value).clamp(0.0, 1.0);
   double get proteinProgress => (totalProtein.value / proteinGoal.value).clamp(0.0, 1.0);
   double get carbsProgress => (totalCarbs.value / carbsGoal.value).clamp(0.0, 1.0);
   double get fatProgress => (totalFat.value / fatGoal.value).clamp(0.0, 1.0);
   double get waterProgress => (waterGlasses.value / waterGoal.value).clamp(0.0, 1.0);
-  double get caloriesRemaining => calorieGoal.value - totalCalories.value;
+  double get caloriesRemaining => calorieGoal.value - totalCalories.value +1;
 
-  String get userId => _client.auth.currentUser?.id ?? '';
+  String _cachedUserId = '';
+  String get userId {
+    final id = _client.auth.currentUser?.id ?? '';
+    if (id.isNotEmpty) _cachedUserId = id;
+    return id.isNotEmpty ? id : _cachedUserId;
+  }
+  final _localDb = LocalDbService();
 
   // ─── Lifecycle ───────────────────────────────────────────────────────────────
   @override
   void onInit() {
     super.onInit();
-    loadDashboard();
-    _startPedometer();
+    loadDashboard().then((_) {
+      _startPedometer();
+    });
     _scheduleMidnightReset();
   }
 
@@ -66,10 +78,17 @@ class NutritionController extends GetxController {
   Future<void> loadDashboard() async {
     if (userId.isEmpty) return;
 
-    // Silently refresh session if expired
-    try {
-      await Supabase.instance.client.auth.refreshSession();
-    } catch (_) {}  // ignore — if it fails user needs to re-login
+    // Check connectivity FIRST — skip auth refresh if offline
+    final connectResult = await Connectivity().checkConnectivity();
+    final isOffline = connectResult.every((r) => r == ConnectivityResult.none);
+
+    if (!isOffline) {
+      // Only refresh session when online
+      try {
+        await Supabase.instance.client.auth.refreshSession()
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {}
+    }
 
     isLoading.value = true;
     try {
@@ -83,26 +102,75 @@ class NutritionController extends GetxController {
       _handleError('loadDashboard', e);
     } finally {
       isLoading.value = false;
+
+      // Show snackbar on EVERY load when offline (init + manual refresh)
+      if (isOffline) {
+        Get.snackbar(
+          'Offline Mode',
+          'Showing cached data. Please connect to the internet to sync.',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orangeAccent,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+      }
     }
   }
 
   void _startPedometer() {
     PedometerService.startListening(
       stepsCallback: (steps) {
-        // Update health data reactively
+        final currentWater = waterGlasses.value > 0
+            ? waterGlasses.value
+            : healthData.value?.waterIntake ?? 0;
+
         healthData.value = DailyHealthData(
           userId: userId,
           steps: steps,
           caloriesBurned: PedometerService.estimatedCaloriesBurned,
-          waterIntake: waterGlasses.value,
+          waterIntake: currentWater,
           source: 'pedometer',
           recordedAt: DateTime.now(),
         );
+        _saveStepsToSupabase(steps);
       },
       statusCallback: (status) {
         pedestrianStatus.value = status;
       },
     );
+  }
+
+  void _saveStepsToSupabase(int steps) {
+    _stepSaveTimer?.cancel();
+    _stepSaveTimer = Timer(const Duration(seconds: 5), () async {
+
+      // Always save to SQLite — works online AND offline
+      await _localDb.cacheHealthData(DailyHealthData(
+        userId: userId,
+        steps: steps,
+        caloriesBurned: PedometerService.estimatedCaloriesBurned,
+        waterIntake: waterGlasses.value,
+        source: 'pedometer',
+        recordedAt: DateTime.now(),
+      ));
+
+      // Then try Supabase — only works online
+      try {
+        final today = DateTime.now();
+        final startOfDay = DateTime(today.year, today.month, today.day);
+        await _client.from('health_data').upsert({
+          'user_id': userId,
+          'steps': steps,
+          'calories_burned': PedometerService.estimatedCaloriesBurned,
+          'water_intake': waterGlasses.value,
+          'source': 'pedometer',
+          'recorded_at': startOfDay.toIso8601String(),
+        }, onConflict: 'user_id, recorded_at');
+        print('=== STEPS SAVED TO SUPABASE: $steps ===');
+      } catch (e) {
+        print('=== STEPS SAVE ERROR (offline, SQLite saved): $e ===');
+      }
+    });
   }
 
   void _scheduleMidnightReset() {
@@ -137,28 +205,33 @@ class NutritionController extends GetxController {
           .from('user_goals')
           .select()
           .eq('user_id', userId)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 3));
 
       final g = data != null
           ? UserGoals.fromMap(data)
           : UserGoals.defaults(userId);
 
-      goals.value      = g;
-      calorieGoal.value = g.calorieGoal;
-      proteinGoal.value = g.proteinGoal;
-      carbsGoal.value   = g.carbsGoal;
-      fatGoal.value     = g.fatGoal;
-      waterGoal.value   = g.waterGoal;
-      stepGoal.value = g.stepGoal;
-    } catch (e) {
-      final g = UserGoals.defaults(userId);
       goals.value       = g;
       calorieGoal.value = g.calorieGoal;
       proteinGoal.value = g.proteinGoal;
       carbsGoal.value   = g.carbsGoal;
       fatGoal.value     = g.fatGoal;
       waterGoal.value   = g.waterGoal;
-      stepGoal.value = g.stepGoal;
+      stepGoal.value    = g.stepGoal;
+
+      await _localDb.cacheUserGoals(g);
+    } catch (e) {
+      // Try SQLite cache first
+      final cached = await _localDb.getCachedUserGoals(userId);
+      final g = cached ?? UserGoals.defaults(userId);
+      goals.value       = g;
+      calorieGoal.value = g.calorieGoal;
+      proteinGoal.value = g.proteinGoal;
+      carbsGoal.value   = g.carbsGoal;
+      fatGoal.value     = g.fatGoal;
+      waterGoal.value   = g.waterGoal;
+      stepGoal.value    = g.stepGoal;
     }
   }
 
@@ -176,6 +249,8 @@ class NutritionController extends GetxController {
       fatGoal.value     = newGoals.fatGoal;
       waterGoal.value   = newGoals.waterGoal;
       stepGoal.value = newGoals.stepGoal;
+
+      await _localDb.cacheUserGoals(newGoals);
     } catch (e) {
       _handleError('saveGoals', e);
     } finally {
@@ -196,14 +271,22 @@ class NutritionController extends GetxController {
           .eq('user_id', userId)
           .gte('logged_at', startOfDay.toIso8601String())
           .lt('logged_at', endOfDay.toIso8601String())
-          .order('logged_at', ascending: false);
+          .order('logged_at', ascending: false)
+          .timeout(const Duration(seconds: 3));
 
       final logs = (data as List).map((e) => NutritionLog.fromMap(e)).toList();
       todayLogs.value = logs;
       _recalcTotals(logs);
+      await _localDb.cacheNutritionLogs(logs);
     } catch (e) {
-      // Use mock data for development when DB isn't set up yet
-      _useMockNutritionData();
+      final today = DateTime.now();
+      final cached = await _localDb.getNutritionLogsForDate(userId, today); // ← ADD
+      if (cached.isNotEmpty) {
+        todayLogs.value = cached;
+        _recalcTotals(cached);
+      } else {
+        _useMockNutritionData();
+      }
     }
   }
 
@@ -249,7 +332,7 @@ class NutritionController extends GetxController {
 
       await _client.from('nutrition_logs').insert(log.toMap());
       await _loadTodayLogs(); // Refresh
-      Get.snackbar('✅ Logged', '$foodName added to $mealType.',
+      Get.snackbar('Logged', '$foodName added to $mealType.',
           snackPosition: SnackPosition.TOP);
     } catch (e) {
       _handleError('logMeal', e);
@@ -263,6 +346,7 @@ class NutritionController extends GetxController {
       await _client.from('nutrition_logs').delete().eq('id', logId);
       todayLogs.removeWhere((l) => l.id == logId);
       _recalcTotals(todayLogs);
+      await _localDb.deleteNutritionLog(logId);
     } catch (e) {
       _handleError('deleteLog', e);
     }
@@ -271,7 +355,6 @@ class NutritionController extends GetxController {
   // ─── Health Data ─────────────────────────────────────────────────────────────
   Future<void> _loadHealthData() async {
     try {
-      // Load last saved data from Supabase as initial value
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
       final data = await _client
@@ -281,50 +364,43 @@ class NutritionController extends GetxController {
           .gte('recorded_at', startOfDay.toIso8601String())
           .order('recorded_at', ascending: false)
           .limit(1)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 3));
 
       if (data != null) {
         healthData.value = DailyHealthData.fromMap(data);
         waterGlasses.value = healthData.value!.waterIntake;
+        await _localDb.cacheHealthData(healthData.value!);
       } else {
-        healthData.value = DailyHealthData.empty(userId);
+        final cached = await _localDb.getCachedHealthData(userId, today);
+        healthData.value = cached ?? DailyHealthData.empty(userId);
         waterGlasses.value = healthData.value!.waterIntake;
       }
       // Pedometer will override steps/calories live via _startPedometer()
     } catch (e) {
-      healthData.value = DailyHealthData.empty(userId);
-      waterGlasses.value = 5;
-    }
-  }
-
-  Future<void> _loadHealthDataFromSupabase() async {
-    try {
       final today = DateTime.now();
-      final startOfDay = DateTime(today.year, today.month, today.day);
-      final data = await _client
-          .from('health_data')
-          .select()
-          .eq('user_id', userId)
-          .gte('recorded_at', startOfDay.toIso8601String())
-          .order('recorded_at', ascending: false)
-          .limit(1)
-          .maybeSingle();
-
-      if (data != null) {
-        healthData.value = DailyHealthData.fromMap(data);
-        waterGlasses.value = healthData.value!.waterIntake;
-      } else {
-        healthData.value = DailyHealthData.empty(userId);
-        waterGlasses.value = healthData.value!.waterIntake;
-      }
-    } catch (e) {
-      healthData.value = DailyHealthData.empty(userId);
-      waterGlasses.value = 5;
+      final cached = await _localDb.getCachedHealthData(userId, today);
+      healthData.value = cached ?? DailyHealthData.empty(userId);
+      waterGlasses.value = healthData.value!.waterIntake;
     }
   }
 
   Future<void> setWaterGlasses(int count) async {
     waterGlasses.value = count;
+
+    // Update local SQLite cache immediately — don't wait for Supabase
+    if (healthData.value != null) {
+      final updated = DailyHealthData(
+        userId: userId,
+        steps: healthData.value!.steps,
+        caloriesBurned: healthData.value!.caloriesBurned,
+        waterIntake: count,                    // ← updated count
+        source: healthData.value!.source,
+        recordedAt: healthData.value!.recordedAt,
+      );
+      await _localDb.cacheHealthData(updated); // ← ADD — save to SQLite instantly
+    }
+
     try {
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
@@ -337,7 +413,7 @@ class NutritionController extends GetxController {
         'recorded_at': startOfDay.toIso8601String(),
       }, onConflict: 'user_id, recorded_at');
     } catch (e) {
-      // Silent fail — UI already updated optimistically
+      // Silent fail — SQLite already updated above
     }
   }
 
@@ -350,7 +426,8 @@ class NutritionController extends GetxController {
           .eq('user_id', userId)
           .eq('is_read', false)
           .order('created_at', ascending: false)
-          .limit(5);
+          .limit(5)
+          .timeout(const Duration(seconds: 3));
 
       insights.value = (data as List).map((e) => NutritionInsight.fromMap(e)).toList();
 
@@ -404,6 +481,7 @@ class NutritionController extends GetxController {
 
   @override
   void onClose() {
+    _stepSaveTimer?.cancel();
     _midnightTimer?.cancel();
     PedometerService.stopListening();
     super.onClose();

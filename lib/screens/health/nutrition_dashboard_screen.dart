@@ -1,20 +1,16 @@
-// screens/health/nutrition_dashboard_screen.dart
-// Drop-in replacement — uses GetX (matching your project pattern)
-// Requires: NutritionController (controllers/nutrition_controller.dart)
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../controllers/nutrition_controller.dart';
-import '../../models/nutrition_model.dart';
 import '../../screens/health/add_meal_screen.dart';
-import '../../controllers/add_meal_controller.dart';
-import '../../models/food_item_model.dart';
 import '../../theme/colors.dart';
 import 'meal_history_screen.dart';
 import 'nutrition_analytics_screen.dart';
 import 'dietary_preferences_screen.dart';
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 typedef _C = C;
 
@@ -36,6 +32,9 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
   late final AnimationController _barsAnim;
   late final AnimationController _entryAnim;
 
+  bool _isOffline = false;
+  StreamSubscription? _connectivitySub;
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +54,11 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
       _ringAnim.forward();
       _barsAnim.forward();
     });
+
+    Connectivity().checkConnectivity().then((r) =>
+        setState(() => _isOffline = r.every((c) => c == ConnectivityResult.none)));
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((r) =>
+        setState(() => _isOffline = r.every((c) => c == ConnectivityResult.none)));
   }
 
   @override
@@ -63,6 +67,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
     _barsAnim.dispose();
     _entryAnim.dispose();
     super.dispose();
+    _connectivitySub?.cancel();
   }
 
   @override
@@ -78,7 +83,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
         return _buildBody();
       }),
       floatingActionButton: _buildFAB(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -147,28 +152,12 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                 ],
               ),
               const Spacer(),
-              GestureDetector(
-                onTap: _ctrl.loadDashboard,
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [_C.primary, _C.dark],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                          color: _C.primary.withOpacity(0.35),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3))
-                    ],
-                  ),
-                  child: const Icon(Icons.refresh_rounded,
-                      color: Colors.white, size: 20),
-                ),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Color(0xFF00A676)),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  _ctrl.loadDashboard();
+                },
               ),
             ],
           ),
@@ -188,11 +177,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Color(0xFF00A676),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
@@ -704,8 +689,18 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: GestureDetector(
               onTap: () {
+                if (_isOffline) {
+                  Get.snackbar(
+                    '📵 You\'re Offline',
+                    'Connect to update water intake.',
+                    snackPosition: SnackPosition.TOP,
+                    backgroundColor: Colors.orange.shade400,
+                    colorText: Colors.white,
+                    duration: const Duration(seconds: 2),
+                  );
+                  return;
+                }
                 HapticFeedback.lightImpact();
-                // Only allow increasing — tapping a filled glass does nothing
                 if (i >= _ctrl.waterGlasses.value) {
                   _ctrl.setWaterGlasses(i + 1);
                 }
@@ -716,9 +711,13 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   width: 30,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: i < _ctrl.waterGlasses.value
+                    color: _isOffline
+                        ? (i < _ctrl.waterGlasses.value
+                        ? _C.water.withOpacity(0.4)
+                        : _C.water.withOpacity(0.05))
+                        : (i < _ctrl.waterGlasses.value
                         ? _C.water
-                        : _C.water.withOpacity(0.09),
+                        : _C.water.withOpacity(0.09)),
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: i < _ctrl.waterGlasses.value
                         ? [
@@ -737,9 +736,11 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   child: Icon(
                     Icons.water_drop_rounded,
                     size: 16,
-                    color: i < _ctrl.waterGlasses.value
+                    color: _isOffline
+                        ? _C.water.withOpacity(0.3)
+                        : (i < _ctrl.waterGlasses.value
                         ? Colors.white
-                        : _C.water.withOpacity(0.35),
+                        : _C.water.withOpacity(0.35)),
                   ),
                 ),
               ),
@@ -785,10 +786,10 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
               icon: Icons.directions_walk_rounded,
               color: _C.steps,
               title: 'Steps',
-              value: '${(steps / 1000).toStringAsFixed(1)}k',
+              value: '$steps',
               sub: 'Goal: ${(_ctrl.stepGoal.value / 1000).toStringAsFixed(1)}k',
               progress: (steps / _ctrl.stepGoal.value).clamp(0.0, 1.0),
-              badge: 'Pedometer',
+              badge: _ctrl.pedestrianStatus.value == 'walking' ? '🚶 Walking' : '⏸ Stopped',
             ),
           ),
           const SizedBox(width: 14),
@@ -800,7 +801,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
               value: '${burned.toInt()}',
               sub: 'kcal active',
               progress: (burned / 500).clamp(0.0, 1.0),
-              badge: _ctrl.pedestrianStatus.value == 'walking' ? '🚶 Walking' : '⏸ Stopped',
+              badge: 'Pedometer',
             ),
           ),
         ],

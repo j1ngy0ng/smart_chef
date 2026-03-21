@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import '../../controllers/nutrition_controller.dart';
 import '../../models/nutrition_model.dart';
 import '../../theme/colors.dart';
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 typedef _C = C;
 
@@ -37,6 +39,8 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
   bool _isSaving = false;
   Worker? _autoSaveWorker;
   final RxInt _changeCounter = 0.obs;
+  bool _isOffline = false;
+  StreamSubscription? _connectivitySub;
 
   // Computed gram goals from ratios + calorie goal
   double get _proteinGoalG => (_calorieGoal * _proteinRatio / 4).roundToDouble();
@@ -53,6 +57,10 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
         vsync: this, duration: const Duration(milliseconds: 500))
       ..forward();
     _loadFromController();
+    Connectivity().checkConnectivity().then((r) =>
+        setState(() => _isOffline = r.every((c) => c == ConnectivityResult.none)));
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((r) =>
+        setState(() => _isOffline = r.every((c) => c == ConnectivityResult.none)));
     _autoSaveWorker = debounce(
       _changeCounter,
           (_) => _autoSave(),
@@ -61,6 +69,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
   }
 
   void _triggerSave() {
+    if (_isOffline) { _showOfflineMessage(); return; }
     _changeCounter.value++;
   }
 
@@ -114,6 +123,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
     _entryAnim.dispose();
     _calCtrl.dispose();
     super.dispose();
+    _connectivitySub?.cancel();
   }
 
   // ── Diet preset logic ─────────────────────────────────────────────────────────
@@ -266,18 +276,18 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Get.back(),
-            child: Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(
-                  color: _C.bg, borderRadius: BorderRadius.circular(11)),
-              child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 16, color: _C.text1),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: CircleAvatar(
+              backgroundColor: Colors.black.withOpacity(0.4),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                onPressed: () => Get.back(),
+              ),
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -285,6 +295,14 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
                     style: TextStyle(
                         fontSize: 20, fontWeight: FontWeight.w800,
                         color: _C.text1, letterSpacing: -0.3)),
+                Text(
+                  _isOffline ? '📵 Offline — changes disabled' : 'Personalise your goals',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _isOffline ? Colors.orange : _C.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -295,7 +313,10 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
 
   // ── Calorie Goal ──────────────────────────────────────────────────────────────
   Widget _buildCalorieCard() {
-    return _card(
+    return AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+      opacity: _isOffline ? 0.5 : 1.0,
+      child: _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -403,6 +424,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -421,7 +443,10 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
       const Color(0xFFEC4899)),
     ];
 
-    return _card(
+    return AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+      opacity: _isOffline ? 0.5 : 1.0,
+      child: _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -435,6 +460,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
             ),
           )),
         ],
+      ),
       ),
     );
   }
@@ -512,7 +538,10 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
 
   // ── Macro Sliders ─────────────────────────────────────────────────────────────
   Widget _buildMacroSlidersCard() {
-    return _card(
+    return AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+      opacity: _isOffline ? 0.5 : 1.0,
+      child: _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -543,6 +572,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
           const SizedBox(height: 18),
           _macroSlider('🫒 Fat', _fatRatio, _C.fat, _onFatChanged),
         ],
+      ),
       ),
     );
   }
@@ -760,7 +790,10 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
   }
 
   Widget _buildStepGoalCard() {
-    return _card(
+    return AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+      opacity: _isOffline ? 0.5 : 1.0,
+      child: _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -839,6 +872,18 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
           ),
         ],
       ),
+      ),
+    );
+  }
+
+  void _showOfflineMessage() {
+    Get.snackbar(
+      '📵 You\'re Offline',
+      'Connect to change your preferences.',
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.orange.shade400,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
 }

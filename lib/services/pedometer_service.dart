@@ -6,6 +6,7 @@
 import 'dart:async';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'local_db_service.dart';
 
 class PedometerService {
   // Streams
@@ -68,19 +69,28 @@ class PedometerService {
   }
 
   // ── Step count handler ─────────────────────────────────────────────────────
-  // pedometer gives cumulative steps since reboot — we track delta from start
-  static void _onStepCount(StepCount event) {
+  static void _onStepCount(StepCount event) async {
     final totalSinceReboot = event.steps;
+    final todayKey = DateTime.now().toString().substring(0, 10); // 'yyyy-MM-dd'
 
-    // First reading — set baseline
-    if (_stepCountAtMidnight == 0) {
+    final db = LocalDbService();
+
+    // Check if we have a baseline for today in SQLite
+    final savedBaseline = await db.getPedometerBaseline(todayKey);
+
+    if (savedBaseline == null) {
+      // First reading of the day — save as baseline
       _stepCountAtMidnight = totalSinceReboot;
-      debugLog('Baseline set: $totalSinceReboot steps since reboot');
+      await db.savePedometerBaseline(todayKey, totalSinceReboot);
+      await db.clearOldBaselines(); // cleanup old entries
+      debugLog('New baseline saved to SQLite: $totalSinceReboot for $todayKey');
+    } else {
+      // Use existing baseline from SQLite
+      _stepCountAtMidnight = savedBaseline;
+      debugLog('Baseline loaded from SQLite: $savedBaseline for $todayKey');
     }
 
-    _todaySteps = totalSinceReboot - _stepCountAtMidnight;
-    if (_todaySteps < 0) _todaySteps = 0; // handles device restart edge case
-
+    _todaySteps = (totalSinceReboot - _stepCountAtMidnight).clamp(0, 999999);
     debugLog('Steps today: $_todaySteps');
     onStepsUpdated?.call(_todaySteps);
   }

@@ -4,6 +4,8 @@
 //   Add new:  Get.to(() => const AddMealScreen())
 //   Edit log: Get.to(() => AddMealScreen(editLog: log))
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -12,6 +14,7 @@ import '../../models/nutrition_model.dart';
 import '../../models/food_item_model.dart';
 import '../../theme/colors.dart';
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 typedef _C = C;
 
@@ -34,7 +37,15 @@ class _AddMealScreenState extends State<AddMealScreen>
   late final AnimationController _slideAnim;
   final FocusNode _searchFocus = FocusNode();
 
+  final Map<String, TextEditingController> _servingControllers = {};
+  final Map<String, TextEditingController> _proteinControllers = {};
+  final Map<String, TextEditingController> _carbsControllers = {};
+  final Map<String, TextEditingController> _fatControllers = {};
+  final Map<String, RxBool> _macroOverrideFlags = {};
+
   bool get _isEditMode => widget.editLog != null;
+  bool _isOffline = false;
+  StreamSubscription? _connectivitySub;
 
   @override
   void initState() {
@@ -49,6 +60,11 @@ class _AddMealScreenState extends State<AddMealScreen>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..forward();
+
+    Connectivity().checkConnectivity().then((r) =>
+        setState(() => _isOffline = r.every((c) => c == ConnectivityResult.none)));
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((r) =>
+        setState(() => _isOffline = r.every((c) => c == ConnectivityResult.none)));
   }
 
   @override
@@ -58,6 +74,20 @@ class _AddMealScreenState extends State<AddMealScreen>
     // Only delete if not being reused
     Get.delete<AddMealController>();
     super.dispose();
+    _connectivitySub?.cancel();
+
+    for (final c in _servingControllers.values) {
+      c.dispose();
+    }
+    for (final c in _proteinControllers.values) {
+      c.dispose();
+    }
+    for (final c in _carbsControllers.values) {
+      c.dispose();
+    }
+    for (final c in _fatControllers.values) {
+      c.dispose();
+    }
   }
 
   @override
@@ -90,18 +120,9 @@ class _AddMealScreenState extends State<AddMealScreen>
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Get.back(),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: _C.bg,
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 16, color: _C.text1),
-            ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.black),
+            onPressed: () => Get.back(),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -129,13 +150,23 @@ class _AddMealScreenState extends State<AddMealScreen>
           ),
           // Barcode scan button
           Obx(() => GestureDetector(
-            onTap: _ctrl.isScanning.value ? null : _ctrl.scanBarcode,
+            onTap: _ctrl.isScanning.value ? null : () {
+              if (_isOffline) {
+                Get.snackbar('📵 You\'re Offline',
+                    'Connect to use the food scanner.',
+                    snackPosition: SnackPosition.TOP,
+                    backgroundColor: Colors.orange.shade400,
+                    colorText: Colors.white);
+                return;
+              }
+              _ctrl.scanBarcode();
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: _ctrl.isScanning.value
+                color: (_ctrl.isScanning.value || _isOffline)
                     ? _C.primary.withOpacity(0.1)
                     : _C.primary,
                 borderRadius: BorderRadius.circular(13),
@@ -244,7 +275,7 @@ class _AddMealScreenState extends State<AddMealScreen>
               decoration: BoxDecoration(
                 color: _C.bg,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _C.divider),
+                border: Border.all(color: _isOffline ? _C.divider.withOpacity(0.5) : _C.divider),
               ),
               child: Row(
                 children: [
@@ -263,13 +294,25 @@ class _AddMealScreenState extends State<AddMealScreen>
                     child: TextField(
                       controller: _ctrl.searchController,
                       focusNode: _searchFocus,
-                      onChanged: _ctrl.onSearchChanged,
+                      onChanged: (val) {
+                        if (_isOffline) {
+                          Get.snackbar('📵 You\'re Offline',
+                              'Connect to search for food.',
+                              snackPosition: SnackPosition.TOP,
+                              backgroundColor: Colors.orange.shade400,
+                              colorText: Colors.white,
+                              duration: const Duration(seconds: 2));
+                          _ctrl.clearSearch();
+                          return;
+                        }
+                        _ctrl.onSearchChanged(val);
+                      },
                       style: const TextStyle(
                           fontSize: 14,
                           color: _C.text1,
                           fontWeight: FontWeight.w500),
-                      decoration: const InputDecoration(
-                        hintText: 'Search food, e.g. "chicken breast"',
+                      decoration: InputDecoration(
+                        hintText: _isOffline ? '📵 Offline — search unavailable' : 'Search food, e.g. "chicken breast"',
                         hintStyle:
                         TextStyle(fontSize: 13, color: _C.text3),
                         border: InputBorder.none,
@@ -333,7 +376,8 @@ class _AddMealScreenState extends State<AddMealScreen>
                     fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 6),
-              const Text('Try scanning a barcode instead',
+              const Text('Try a simpler search term\ne.g. "chicken" instead of "chicken chop"',
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: _C.text3, fontSize: 12)),
             ],
           ),
@@ -406,15 +450,15 @@ class _AddMealScreenState extends State<AddMealScreen>
                   Row(
                     children: [
                       _miniChip(
-                          '${food.proteinPer100g.toInt()}g P',
+                          'P: ${food.proteinPer100g.toStringAsFixed(1)}g',
                           _C.protein),
                       const SizedBox(width: 4),
                       _miniChip(
-                          '${food.carbsPer100g.toInt()}g C',
+                          'C: ${food.carbsPer100g.toStringAsFixed(1)}g',
                           _C.carbs),
                       const SizedBox(width: 4),
                       _miniChip(
-                          '${food.fatPer100g.toInt()}g F',
+                          'F: ${food.fatPer100g.toStringAsFixed(1)}g',
                           _C.fat),
                     ],
                   ),
@@ -426,7 +470,7 @@ class _AddMealScreenState extends State<AddMealScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${food.caloriesPer100g.toInt()}',
+                  '${food.calculatedCaloriesPer100g.toStringAsFixed(1)}',
                   style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -493,49 +537,8 @@ class _AddMealScreenState extends State<AddMealScreen>
           ),
           const SizedBox(height: 6),
           const Text(
-            'Search for food above or scan a barcode',
+            'Search for food above or scan the food',
             style: TextStyle(fontSize: 13, color: _C.text2),
-          ),
-          const SizedBox(height: 24),
-          // Quick-add popular items
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              'Popular items',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: _C.text3,
-                  fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: FoodItem.mockFoods()
-                .take(6)
-                .map((f) => GestureDetector(
-              onTap: () => _ctrl.addToCart(f),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: _C.card,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _C.divider),
-                ),
-                child: Text(
-                  '${_foodEmoji(f.name)} ${f.name}',
-                  style: const TextStyle(
-                      fontSize: 12,
-                      color: _C.text1,
-                      fontWeight: FontWeight.w500),
-                ),
-              ),
-            ))
-                .toList(),
           ),
         ],
       ),
@@ -614,7 +617,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                             borderSide: const BorderSide(color: _C.primary),
                           ),
                         ),
-                        onChanged: (val) => item.foodName.value = val, // ← needs model fix below
+                        onChanged: (val) => item.foodName.value = val,
                       )
                           : Text(
                         item.foodName.value,
@@ -623,13 +626,13 @@ class _AddMealScreenState extends State<AddMealScreen>
                       ),
                       ),
                       const SizedBox(height: 3),
-                      Text(
-                        '${item.servingGrams.toInt()}g  ·  ${item.calories.toInt()} kcal',
+                      Obx(() => Text(
+                        '${item.servingGrams.toInt()}g  ·  ${item.calories.toStringAsFixed(1)} kcal',
                         style: const TextStyle(
                             fontSize: 12, color: _C.text2),
-                      ),
+                      )),
                       const SizedBox(height: 5),
-                      Row(
+                      Obx(() => Row(
                         children: [
                           _macroMini('P',
                               item.protein.toStringAsFixed(1),
@@ -644,7 +647,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                               item.fat.toStringAsFixed(1),
                               _C.fat),
                         ],
-                      ),
+                      )),
                     ],
                   ),
                 ),
@@ -680,8 +683,17 @@ class _AddMealScreenState extends State<AddMealScreen>
   }
 
   Widget _buildServingEditor(MealCartItem item) {
-    final controller = TextEditingController(
-        text: item.servingGrams.value.toInt().toString());
+    _servingControllers.putIfAbsent(item.cartId, () => TextEditingController(text: item.servingGrams.value.toInt().toString()));
+    _proteinControllers.putIfAbsent(item.cartId, () => TextEditingController(text: item.protein.toStringAsFixed(1)));
+    _carbsControllers.putIfAbsent(item.cartId,   () => TextEditingController(text: item.carbs.toStringAsFixed(1)));
+    _fatControllers.putIfAbsent(item.cartId,     () => TextEditingController(text: item.fat.toStringAsFixed(1)));
+    _macroOverrideFlags.putIfAbsent(item.cartId, () => false.obs);
+
+    final servingController = _servingControllers[item.cartId]!;
+    final proteinController = _proteinControllers[item.cartId]!;
+    final carbsController   = _carbsControllers[item.cartId]!;
+    final fatController     = _fatControllers[item.cartId]!;
+    final macroOverride     = _macroOverrideFlags[item.cartId]!;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
@@ -689,6 +701,8 @@ class _AddMealScreenState extends State<AddMealScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Divider(color: _C.divider, height: 16),
+
+          // ── Serving size section ──────────────────────────────────────────
           const Text('Serving size (grams)',
               style: TextStyle(
                   fontSize: 12,
@@ -701,83 +715,105 @@ class _AddMealScreenState extends State<AddMealScreen>
               _servingBtn(
                 icon: Icons.remove_rounded,
                 onTap: () {
+                  if (macroOverride.value) return; // lock serving if macros overridden
                   final newVal =
                   (item.servingGrams.value - 25).clamp(25.0, 9999.0);
                   _ctrl.updateServing(item.cartId, newVal);
-                  controller.text = newVal.toInt().toString();
+                  servingController.text = newVal.toInt().toString();
+                  // Sync macro controllers to new calculated values
+                  proteinController.text = item.protein.toStringAsFixed(1);
+                  carbsController.text = item.carbs.toStringAsFixed(1);
+                  fatController.text = item.fat.toStringAsFixed(1);
                 },
               ),
               const SizedBox(width: 10),
               // Text input
               Expanded(
-                child: Container(
+                child: Obx(() => Container(
                   height: 42,
                   decoration: BoxDecoration(
-                    color: _C.bg,
+                    color: macroOverride.value ? _C.bg.withOpacity(0.5) : _C.bg,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _C.primary.withOpacity(0.3)),
+                    border: Border.all(color: macroOverride.value
+                        ? _C.divider.withOpacity(0.4)
+                        : _C.primary.withOpacity(0.3)),
                   ),
                   child: TextField(
-                    controller: controller,
+                    controller: servingController,
                     textAlign: TextAlign.center,
+                    textAlignVertical: TextAlignVertical.center,
                     keyboardType: TextInputType.number,
+                    enabled: !macroOverride.value,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly
                     ],
-                    onChanged: (v) {
+                    onSubmitted: (v) {
                       final parsed = double.tryParse(v);
                       if (parsed != null && parsed > 0) {
                         _ctrl.updateServing(item.cartId, parsed);
+                        proteinController.text = item.protein.toStringAsFixed(1);
+                        carbsController.text = item.carbs.toStringAsFixed(1);
+                        fatController.text = item.fat.toStringAsFixed(1);
                       }
                     },
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: _C.text1),
+                        color: macroOverride.value ? _C.text3 : _C.text1),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding:
-                      EdgeInsets.symmetric(vertical: 12),
-                      suffix: Text('g',
-                          style:
-                          TextStyle(fontSize: 13, color: _C.text3)),
+                      EdgeInsets.symmetric(vertical: 7),
+                      suffix: Padding(
+                        padding: EdgeInsets.only(right: 15),
+                        child: Text(
+                          'g',
+                          style: TextStyle(fontSize: 13, color: _C.text3),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                )),
               ),
               const SizedBox(width: 10),
               // Plus
               _servingBtn(
                 icon: Icons.add_rounded,
                 onTap: () {
+                  if (macroOverride.value) return;
                   final newVal = (item.servingGrams.value + 25).toDouble();
                   _ctrl.updateServing(item.cartId, newVal);
-                  controller.text = newVal.toInt().toString();
+                  servingController.text = newVal.toInt().toString();
+                  proteinController.text = item.protein.toStringAsFixed(1);
+                  carbsController.text = item.carbs.toStringAsFixed(1);
+                  fatController.text = item.fat.toStringAsFixed(1);
                 },
               ),
             ],
           ),
           const SizedBox(height: 10),
           // Quick presets
-          Row(
+          Obx(() => Row(
             children: [50, 100, 150, 200, 250]
                 .map((g) => Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(right: 4),
                 child: GestureDetector(
-                  onTap: () {
+                  onTap: macroOverride.value ? null : () {
                     _ctrl.updateServing(item.cartId, g.toDouble());
-                    controller.text = g.toString();
+                    servingController.text = g.toString();
+                    proteinController.text = item.protein.toStringAsFixed(1);
+                    carbsController.text = item.carbs.toStringAsFixed(1);
+                    fatController.text = item.fat.toStringAsFixed(1);
                   },
                   child: Container(
                     padding:
                     const EdgeInsets.symmetric(vertical: 7),
                     decoration: BoxDecoration(
-                      color:
-                      item.servingGrams.value.toInt() == g
+                      color: (!macroOverride.value && item.servingGrams.value.toInt() == g)
                           ? _C.primary
-                          : _C.bg,
+                          : macroOverride.value ? _C.bg.withOpacity(0.5) : _C.bg,
                       borderRadius:
                       BorderRadius.circular(8),
                     ),
@@ -787,10 +823,9 @@ class _AddMealScreenState extends State<AddMealScreen>
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color:
-                          item.servingGrams.value.toInt() == g
+                          color: (!macroOverride.value && item.servingGrams.value.toInt() == g)
                               ? Colors.white
-                              : _C.text2,
+                              : macroOverride.value ? _C.text3 : _C.text2,
                         ),
                       ),
                     ),
@@ -799,10 +834,150 @@ class _AddMealScreenState extends State<AddMealScreen>
               ),
             ))
                 .toList(),
-          ),
+          )),
+
+          const SizedBox(height: 16),
+
+          // ── Macro override section ────────────────────────────────────────
+          Obx(() => Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Nutrition values',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: _C.text2,
+                            fontWeight: FontWeight.w600)),
+                    Text(
+                      macroOverride.value
+                          ? 'Editing manually — serving size locked'
+                          : 'Auto-calculated from serving size',
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: macroOverride.value ? _C.primary : _C.text3),
+                    ),
+                  ],
+                ),
+              ),
+              // Toggle switch
+              GestureDetector(
+                onTap: () {
+                  macroOverride.value = !macroOverride.value;
+                  if (!macroOverride.value) {
+                    // Switching back to serving mode: clear override so
+                    // macros go back to being calculated from servingGrams
+                    _ctrl.clearMacroOverride(item.cartId);
+                    proteinController.text = item.protein.toStringAsFixed(1);
+                    carbsController.text = item.carbs.toStringAsFixed(1);
+                    fatController.text = item.fat.toStringAsFixed(1);
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: macroOverride.value
+                        ? _C.primary.withOpacity(0.12)
+                        : _C.bg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: macroOverride.value
+                          ? _C.primary.withOpacity(0.4)
+                          : _C.divider,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        macroOverride.value
+                            ? Icons.edit_rounded
+                            : Icons.lock_outline_rounded,
+                        size: 12,
+                        color: macroOverride.value ? _C.primary : _C.text3,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        macroOverride.value ? 'Manual' : 'Override',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: macroOverride.value ? _C.primary : _C.text3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          )),
           const SizedBox(height: 10),
-          // Live nutrition for this serving
-          Container(
+
+          // P / C / F input row
+          Obx(() => Row(
+            children: [
+              // Protein
+              Expanded(
+                child: _macroInputField(
+                  label: 'Protein',
+                  unit: 'g',
+                  color: _C.protein,
+                  controller: proteinController,
+                  enabled: macroOverride.value,
+                  onChanged: (val) {
+                    if (!macroOverride.value) return;
+                    final p = double.tryParse(val) ?? item.protein;
+                    final c = double.tryParse(carbsController.text) ?? item.carbs;
+                    final f = double.tryParse(fatController.text) ?? item.fat;
+                    _ctrl.updateMacros(item.cartId, p, c, f);
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Carbs
+              Expanded(
+                child: _macroInputField(
+                  label: 'Carbs',
+                  unit: 'g',
+                  color: _C.carbs,
+                  controller: carbsController,
+                  enabled: macroOverride.value,
+                  onChanged: (val) {
+                    if (!macroOverride.value) return;
+                    final p = double.tryParse(proteinController.text) ?? item.protein;
+                    final c = double.tryParse(val) ?? item.carbs;
+                    final f = double.tryParse(fatController.text) ?? item.fat;
+                    _ctrl.updateMacros(item.cartId, p, c, f);
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Fat
+              Expanded(
+                child: _macroInputField(
+                  label: 'Fat',
+                  unit: 'g',
+                  color: _C.fat,
+                  controller: fatController,
+                  enabled: macroOverride.value,
+                  onChanged: (val) {
+                    if (!macroOverride.value) return;
+                    final p = double.tryParse(proteinController.text) ?? item.protein;
+                    final c = double.tryParse(carbsController.text) ?? item.carbs;
+                    final f = double.tryParse(val) ?? item.fat;
+                    _ctrl.updateMacros(item.cartId, p, c, f);
+                  },
+                ),
+              ),
+            ],
+          )),
+
+          const SizedBox(height: 10),
+
+          // Live nutrition preview
+          Obx(() => Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: _C.primary.withOpacity(0.05),
@@ -813,7 +988,7 @@ class _AddMealScreenState extends State<AddMealScreen>
               MainAxisAlignment.spaceAround,
               children: [
                 _liveNutrient('Calories',
-                    '${item.calories.toInt()} kcal', _C.text1),
+                    '${item.calories.toStringAsFixed(1)} kcal', _C.text1),
                 _liveNutrient('Protein',
                     '${item.protein.toStringAsFixed(1)}g', _C.protein),
                 _liveNutrient('Carbs',
@@ -822,25 +997,98 @@ class _AddMealScreenState extends State<AddMealScreen>
                     '${item.fat.toStringAsFixed(1)}g', _C.fat),
               ],
             ),
-          ),
+          )),
           const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
               onPressed: () => _ctrl.toggleEditing(item.cartId),
-              style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              child: const Text('Done',
-                  style: TextStyle(
-                      color: _C.primary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700)),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                backgroundColor: _C.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Done',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // ── Macro Input Field Helper ─────────────────────────────────────────────────
+  Widget _macroInputField({
+    required String label,
+    required String unit,
+    required Color color,
+    required TextEditingController controller,
+    required bool enabled,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 4),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 11,
+                    color: enabled ? color : _C.text3,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 40,
+          decoration: BoxDecoration(
+            color: enabled ? Colors.white : _C.bg,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+              color: enabled ? color.withOpacity(0.5) : _C.divider.withOpacity(0.4),
+              width: enabled ? 1.5 : 1,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            enabled: enabled,
+            textAlign: TextAlign.center,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+            ],
+            onChanged: onChanged,
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: enabled ? _C.text1 : _C.text3),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              suffix: Text(unit,
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: enabled ? color : _C.text3)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -871,7 +1119,7 @@ class _AddMealScreenState extends State<AddMealScreen>
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _totalStat('Total Cal',
-                  '${_ctrl.totalCalories.toInt()} kcal',
+                  '${_ctrl.totalCalories.toStringAsFixed(1)} kcal',
                   _C.text1,
                   isBold: true),
               _totalStat(
@@ -887,14 +1135,24 @@ class _AddMealScreenState extends State<AddMealScreen>
           const SizedBox(height: 12),
           // Save Button
           Obx(() => GestureDetector(
-            onTap: _ctrl.isSaving.value ? null : _ctrl.saveMeal,
+            onTap: _ctrl.isSaving.value ? null : () {
+              if (_isOffline) {
+                Get.snackbar('📵 You\'re Offline',
+                    'Connect to save your meal.',
+                    snackPosition: SnackPosition.TOP,
+                    backgroundColor: Colors.orange.shade400,
+                    colorText: Colors.white);
+                return;
+              }
+              _ctrl.saveMeal();
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: double.infinity,
               height: 52,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: _ctrl.isSaving.value
+                  colors: (_ctrl.isSaving.value || _isOffline)
                       ? [_C.primary.withOpacity(0.5), _C.dark.withOpacity(0.5)]
                       : [_C.primary, _C.dark],
                   begin: Alignment.topLeft,

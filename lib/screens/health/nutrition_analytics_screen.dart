@@ -1,13 +1,3 @@
-// screens/health/nutrition_analytics_screen.dart
-// Nutrition History & Analytics Screen
-// Features:
-//   - Weekly/monthly calorie line chart
-//   - Intake vs calories burned bar chart
-//   - Macro distribution pie chart
-//   - Date filter dropdown
-//   - Recent entries with delete
-//   - AI-powered insights cards
-
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +6,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/nutrition_model.dart';
 import '../../controllers/nutrition_controller.dart';
 import '../../theme/colors.dart';
+import '../../services/local_db_service.dart';
+import 'package:collection/collection.dart';
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 typedef _C = C;
 
@@ -35,6 +29,8 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
   final SupabaseClient _client = Supabase.instance.client;
   late final NutritionController _ctrl;
 
+  final _localDb = LocalDbService();
+
   // Animation controllers
   late final AnimationController _fadeAnim;
   late final AnimationController _chartAnim;
@@ -46,6 +42,8 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
   List<NutritionLog> _recentLogs = [];
   List<NutritionInsight> _insights = [];
   String _deletingId = '';
+  bool _isOffline = false;
+  StreamSubscription? _connectivitySub;
 
   String get _userId => _client.auth.currentUser?.id ?? '';
 
@@ -58,6 +56,10 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
     _chartAnim = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1400));
     _loadData();
+    Connectivity().checkConnectivity().then((r) =>
+        setState(() => _isOffline = r.every((c) => c == ConnectivityResult.none)));
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((r) =>
+        setState(() => _isOffline = r.every((c) => c == ConnectivityResult.none)));
   }
 
   @override
@@ -65,6 +67,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
     _fadeAnim.dispose();
     _chartAnim.dispose();
     super.dispose();
+    _connectivitySub?.cancel();
   }
 
   // ── Data Loading ─────────────────────────────────────────────────────────────
@@ -76,15 +79,31 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
       final end = DateTime.now();
       final start = end.subtract(Duration(days: days - 1));
 
-      final logsData = await _client
-          .from('nutrition_logs')
-          .select()
-          .eq('user_id', _userId)
-          .gte('logged_at', DateTime(start.year, start.month, start.day).toIso8601String())
-          .lte('logged_at', DateTime(end.year, end.month, end.day, 23, 59, 59).toIso8601String())
-          .order('logged_at', ascending: true);
+      List<NutritionLog> allLogs = [];
+      try {
+        final logsData = await _client
+            .from('nutrition_logs')
+            .select('user_id, steps, calories_burned, water_intake, source, recorded_at')
+            .eq('user_id', _userId)
+            .gte('logged_at', DateTime(start.year, start.month, start.day).toIso8601String())
+            .lte('logged_at', DateTime(end.year, end.month, end.day, 23, 59, 59).toIso8601String())
+            .order('logged_at', ascending: true);
+        allLogs = (logsData as List).map((e) => NutritionLog.fromMap(e)).toList();
 
-      final allLogs = (logsData as List).map((e) => NutritionLog.fromMap(e)).toList();
+        // Cache ALL logs from the full date range — not just today
+        if (allLogs.isNotEmpty) {
+          await _localDb.cacheNutritionLogs(allLogs);
+          print('=== ANALYTICS: cached ${allLogs.length} logs to SQLite ===');
+        }
+      } catch (e) {
+        // Offline — load each day from SQLite
+        for (int i = 0; i < days; i++) {
+          final d = start.add(Duration(days: i));
+          final cached = await _localDb.getNutritionLogsForDate(_userId, d);
+          allLogs.addAll(cached);
+        }
+        print('=== ANALYTICS OFFLINE: loaded ${allLogs.length} logs from SQLite ===');
+      }
 
       // Build per-day aggregates
       final Map<String, _DayData> byDay = {};
@@ -103,38 +122,61 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
         }
       }
 
-      final healthRawData = await _client
-          .from('health_data')
-          .select('calories_burned, recorded_at')
-          .eq('user_id', _userId)
-          .gte('recorded_at', DateTime(start.year, start.month, start.day).toIso8601String())
-          .lte('recorded_at', DateTime(end.year, end.month, end.day, 23, 59, 59).toIso8601String())
-          .order('recorded_at', ascending: true);
-
       final Map<String, double> burnedByDay = {};
-      for (final row in healthRawData as List) {
-        final date = DateTime.tryParse(row['recorded_at'] ?? '');
-        if (date == null) continue;
-        final key = _dateKey(date);
-        final burned = (row['calories_burned'] as num?)?.toDouble() ?? 0;
-        // Keep the highest value for the day (latest pedometer reading)
-        if (!burnedByDay.containsKey(key) || burned > burnedByDay[key]!) {
-          burnedByDay[key] = burned;
+      try {
+        final healthRawData = await _client
+            .from('health_data')
+            .select('user_id, steps, calories_burned, water_intake, source, recorded_at')
+            .eq('user_id', _userId)
+            .gte('recorded_at', DateTime(start.year, start.month, start.day).toIso8601String())
+            .lte('recorded_at', DateTime(end.year, end.month, end.day, 23, 59, 59).toIso8601String())
+            .order('recorded_at', ascending: true);
+
+        await _localDb.cacheHealthDataList(
+            List<Map<String, dynamic>>.from(healthRawData));
+
+        for (final row in healthRawData as List) {
+          final date = DateTime.tryParse(row['recorded_at'] ?? '');
+          if (date == null) continue;
+          final key = _dateKey(date);
+          final burned = (row['calories_burned'] as num?)?.toDouble() ?? 0;
+          if (!burnedByDay.containsKey(key) || burned > burnedByDay[key]!) {
+            burnedByDay[key] = burned;
+          }
         }
+        print('=== ANALYTICS: burned calories loaded from Supabase ===');
+      } catch (e) {
+        // Offline — load from cached_health_data for each day
+        for (int i = 0; i < days; i++) {
+          final d = start.add(Duration(days: i));
+          final cached = await _localDb.getCachedHealthData(_userId, d);
+          if (cached != null) {
+            burnedByDay[_dateKey(d)] = cached.caloriesBurned;
+          }
+        }
+        print('=== ANALYTICS OFFLINE: burned calories loaded from SQLite ===');
       }
 
       for (final d in byDay.values) {
         d.burned = burnedByDay[_dateKey(d.date)] ?? 0;
       }
 
-      // Recent logs (last 10, newest first)
-      final recentData = await _client
-          .from('nutrition_logs')
-          .select()
-          .eq('user_id', _userId)
-          .order('logged_at', ascending: false)
-          .limit(10);
-      final recent = (recentData as List).map((e) => NutritionLog.fromMap(e)).toList();
+      List<NutritionLog> recent = [];
+      try {
+        final recentData = await _client
+            .from('nutrition_logs')
+            .select()
+            .eq('user_id', _userId)
+            .order('logged_at', ascending: false)
+            .limit(10);
+        recent = (recentData as List).map((e) => NutritionLog.fromMap(e)).toList();
+      } catch (e) {
+        // Offline — use allLogs already fetched, sorted newest first
+        recent = allLogs
+            .sorted((a, b) => b.loggedAt.compareTo(a.loggedAt))
+            .take(10)
+            .toList();
+      }
 
       setState(() {
         _chartData = byDay.values.toList();
@@ -177,6 +219,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
       await _client.from('nutrition_logs').delete().eq('id', id);
       setState(() => _recentLogs.removeWhere((l) => l.id == id));
       _ctrl.deleteLog(id);
+      await _localDb.deleteNutritionLog(id);
       HapticFeedback.mediumImpact();
       Get.snackbar('🗑️ Deleted', 'Entry removed.',
           snackPosition: SnackPosition.TOP,
@@ -225,15 +268,14 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Get.back(),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                  color: _C.bg, borderRadius: BorderRadius.circular(11)),
-              child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 16, color: _C.text1),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: CircleAvatar(
+              backgroundColor: Colors.black.withOpacity(0.4),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                onPressed: () => Get.back(),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -281,21 +323,12 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _loadData,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [_C.primary, _C.dark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: const Icon(Icons.refresh_rounded,
-                  color: Colors.white, size: 18),
-            ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF00A676)),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _loadData();
+            },
           ),
         ],
       ),
@@ -665,8 +698,11 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
 
     return Dismissible(
       key: Key('analytics_${log.id}'),
-      direction: DismissDirection.endToStart,
+      direction: _isOffline
+          ? DismissDirection.none
+          : DismissDirection.endToStart,
       confirmDismiss: (_) async {
+        if (_isOffline) { return false; }
         HapticFeedback.mediumImpact();
         return await _showDeleteConfirm(log.foodName);
       },
@@ -748,14 +784,26 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: isDeleting ? null : () async {
+                onTap: (isDeleting || _isOffline) ? null : () async {
+                  if (_isOffline) {
+                    Get.snackbar('📵 You\'re Offline',
+                        'Connect to delete entries.',
+                        snackPosition: SnackPosition.TOP,
+                        backgroundColor: Colors.orange.shade400,
+                        colorText: Colors.white,
+                        duration: const Duration(seconds: 2));
+                    return;
+                  }
                   final confirm = await _showDeleteConfirm(log.foodName);
                   if (confirm == true) _deleteLog(log.id);
                 },
                 child: Container(
                   width: 32, height: 32,
                   decoration: BoxDecoration(
-                    color: _C.errorRed.withOpacity(0.08),
+                    // Grey out when offline
+                    color: _isOffline
+                        ? Colors.grey.withOpacity(0.08)
+                        : _C.errorRed.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: isDeleting
@@ -763,8 +811,10 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
                       padding: EdgeInsets.all(8),
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: _C.errorRed))
-                      : const Icon(Icons.delete_outline_rounded,
-                      color: _C.errorRed, size: 16),
+                      : Icon(Icons.delete_outline_rounded,
+                      // Grey icon when offline
+                      color: _isOffline ? Colors.grey : _C.errorRed,
+                      size: 16),
                 ),
               ),
             ],

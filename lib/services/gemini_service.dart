@@ -134,7 +134,6 @@ tomato, egg, onion
         final title = recipe["title"] ?? "";
         final imageUrl = await fetchRecipeImagePixabay(title);
 
-        // ✅ Only include if image exists (kept your logic)
         if (imageUrl.isNotEmpty) {
           recipes.add({
             "title": title,
@@ -252,6 +251,74 @@ tomato, egg, onion
       }
     } catch (e) {
       print('=== GEMINI ERROR: $e ===');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> searchFoodNutrition(String foodName) async {
+    try {
+      final url = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$_nutritionApiKey',
+      );
+
+      final prompt = '''
+You are a nutrition database. For the food "$foodName", provide accurate nutrition data per 100g.
+
+Respond ONLY with a valid JSON object in this exact format:
+{
+  "food_name": "exact food name",
+  "calories_per_100g": number,
+  "protein_per_100g": number,
+  "carbs_per_100g": number,
+  "fat_per_100g": number,
+  "serving_size_g": number
+}
+
+Rules:
+- calories_per_100g must equal (protein_per_100g × 4) + (carbs_per_100g × 4) + (fat_per_100g × 9)
+- serving_size_g is the typical single serving in grams (e.g. 300 for nasi lemak, 100 for bread)
+- If the food doesn't exist or is not a food, respond with: {"error": "not_food"}
+- No markdown, no explanation, JSON only
+''';
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'model': 'gemini-2.5-flash',
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt}
+              ]
+            }
+          ],
+          'tools': [
+            {'google_search': {}}  // lets Gemini look up real nutrition data
+          ],
+        }),
+      );
+
+      print('=== GEMINI SEARCH STATUS: ${response.statusCode} ===');
+
+      if (response.statusCode != 200) return null;
+
+      final body = jsonDecode(response.body);
+      final text = (body['candidates']?[0]?['content']?['parts']?[0]?['text'] as String?) ?? '';
+
+      print('=== GEMINI SEARCH TEXT: $text ===');
+
+      // Extract JSON from response
+      final match = RegExp(r'\{[\s\S]*?\}').firstMatch(text);
+      if (match == null) return null;
+
+      final result = jsonDecode(match.group(0)!);
+      if (result['error'] != null) return null;
+
+      print('=== GEMINI SEARCH RESULT: $result ===');
+      return result;
+    } catch (e) {
+      print('=== GEMINI SEARCH ERROR: $e ===');
       return null;
     }
   }
