@@ -20,10 +20,10 @@ class SmartPlannerScreen extends GetView<PlannerController> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // --- EXPANDABLE ACTION GROUP (Speed Dial) ---
+      // --- ADD NEW MEAL TO PLANNER OPTION BUTTONS
       floatingActionButton: SpeedDial(
         icon: Icons.add,
-        activeIcon: Icons.close, // Changes to 'X' when open
+        activeIcon: Icons.close,
         backgroundColor: const Color(0xFF00A676),
         foregroundColor: Colors.white,
         overlayColor: Colors.black,
@@ -57,7 +57,6 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             backgroundColor: const Color(0xFF00A676),
             label: 'My Saved Meals',
             onTap: () {
-              // Fetch user's saved meals before showing the sheet
               controller.fetchSavedMeals();
               _showSavedMealSheet(context, controller);
             },
@@ -185,7 +184,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
     );
   }
 
-  // --- ADD OPTION SHEET (Search + Smart Gen + Meal Picker) ---
+  // --- ADD OPTION SHEET
 
   void _showAddOptionSheet(BuildContext context, PlannerController controller, PostController postController) {
     controller.searchQuery.value = "";
@@ -718,7 +717,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
   Widget _buildCardImage(String imageUrl) {
     bool isLocalFile =
         imageUrl.startsWith('/') ||
-        imageUrl.startsWith('data/'); // Add 'data/' for some Android paths
+        imageUrl.startsWith('data/');
 
     if (isLocalFile && File(imageUrl).existsSync()) {
       return Image.file(
@@ -735,7 +734,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
       width: double.infinity,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) =>
-          _buildPlaceholder(), // Use your existing placeholder
+          _buildPlaceholder(),
     );
   }
 
