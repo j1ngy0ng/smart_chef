@@ -22,11 +22,10 @@ class PlannerController extends GetxController {
   var searchQuery = "".obs;
   var selectedCategory = "All".obs;
   // State for Grocery
-  var groceryList = <GroceryItem>[].obs; // Use your new GroceryItem model
-  var priceCache = <String, double>{}.obs; // The "Smart" memory
-  // Calculated Totals
+  var groceryList = <GroceryItem>[].obs;
+  var priceCache = <String, double>{}.obs;
   double get totalGroceryPrice => groceryList.fold(0, (sum, item) => sum + item.price);
-  //supabase
+  // Supabase
   var isCloudSaved = false.obs;
   var cloudSavedMeals = <Map<String, dynamic>>[].obs;
 
@@ -39,15 +38,13 @@ class PlannerController extends GetxController {
 
   // --- Grocery List Logic ---
 
-  // 1. Initial Load: Call this in onInit()
   Future<void> loadGroceryList() async {
     final List<Map<String, dynamic>> items = await _dbService.getAllGroceryItems();
 
-    // Clean! Uses the factory you just made
     groceryList.assignAll(items.map((map) => GroceryItem.fromMap(map)).toList());
   }
 
-  // 2. The "Add/Remove" Toggle
+  // "Add/Remove" Toggle
   Future<void> toggleGroceryItem(GroceryItem item) async {
     if (groceryList.any((i) => i.name == item.name)) {
       // Remove from list and DB
@@ -60,7 +57,7 @@ class PlannerController extends GetxController {
     }
   }
 
-  // 3. Update Price (The "Live Editor")
+  // Update Price ("Live Editor")
   Future<void> updateGroceryPrice(GroceryItem item, double newPrice) async {
     item.price = newPrice;
     // Pass the category here so the DB doesn't lose it or throw an error!
@@ -74,22 +71,21 @@ class PlannerController extends GetxController {
     required double newPrice,
     required String newCategory,
   }) async {
-    // 1. Remove old entry if the name changed
+    // Remove old entry if the name changed
     if (oldName != newName) {
       await _dbService.removeGroceryItem(oldName);
     }
 
-    // 2. Update/Insert new entry
+    // Update/Insert new entry
     await _dbService.upsertGroceryItem(newName, newPrice, newCategory);
 
-    // 3. Refresh list
+    // Refresh list
     await loadGroceryList();
   }
 
   Map<String, double> get categoryTotals {
     Map<String, double> totals = {};
     for (var item in groceryList) {
-      // We use the category stored in the item, or default to 'General'
       String cat = item.category;
       totals[cat] = (totals[cat] ?? 0) + item.price;
     }
@@ -97,14 +93,12 @@ class PlannerController extends GetxController {
   }
 
   // --- Database Methods ---
-
   Future<void> fetchMealsForDate(DateTime date) async {
     try {
       isLoading.value = true;
       String formattedDate = date.toIso8601String().split('T')[0];
       List<Meal> meals = await _dbService.getMealsByDate(formattedDate);
 
-      // SORTING: Ensures Breakfast is always at the top, then Lunch, then Dinner
       final typeOrder = {'Breakfast': 0, 'Lunch': 1, 'Dinner': 2};
       meals.sort(
         (a, b) => (typeOrder[a.type] ?? 99).compareTo(typeOrder[b.type] ?? 99),
@@ -133,24 +127,19 @@ class PlannerController extends GetxController {
   Future<void> updateMeal(Meal meal) async {
     await _dbService.updateMeal(
       meal,
-    ); // Ensure this exists in your LocalDbService
+    );
     await fetchMealsForDate(selectedDay.value);
   }
 
   // --- AI & Integration ---
-
   void addFromPost(PostModel post, String mealType) {
     final meal = Meal(
-      id: null, // Let SQLite handle the ID
+      id: null,
       title: post.title,
       type: mealType,
       kcal: 500,
-      // Use the REAL image from Supabase.
-      // Only use the fallback if the post literally has no image.
       imageUrl: post.imageUrl ?? "https://loremflickr.com/800/600/food,recipe",
       ingredients: "Unstructured Content",
-      // Fix "Dead Code": if post.content is already a String,
-      // the compiler warns that '??' is useless.
       steps: post.content,
       date: selectedDay.value.toIso8601String().split('T')[0],
       isSocialPost: true,
@@ -166,7 +155,7 @@ class PlannerController extends GetxController {
       isLoading.value = true;
 
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash', // Use 1.5-flash for stability
+        model: 'gemini-2.5-flash',
         apiKey: 'AIzaSyCeHUyp3gMl9cBndMQvYWrIxlZGHLrCcHg',
       );
 
@@ -191,7 +180,6 @@ class PlannerController extends GetxController {
         final Map<String, dynamic> data = jsonDecode(jsonString);
 
         // --- THE GLOBAL SAVE ---
-        // Instead of just updating 'meal.id', we update EVERY meal with this title
         await _dbService.updateAllMealsWithTitle(
           title: meal.title,
           ingredients: data['ingredients'] ?? "",
@@ -199,7 +187,6 @@ class PlannerController extends GetxController {
           kcal: data['kcal'] is int ? data['kcal'] : 500,
         );
 
-        // Refresh the current view
         await fetchMealsForDate(selectedDay.value);
 
         Get.snackbar(
@@ -239,7 +226,6 @@ class PlannerController extends GetxController {
 
       String requestedTypes = mealTypes.join(', ');
 
-      // Added "image_query" to the prompt instructions
       final prompt = """
       Generate a healthy meal plan for these dates: ${rangeDates.join(', ')}.
       ONLY generate these meal types: $requestedTypes. 
@@ -299,8 +285,6 @@ class PlannerController extends GetxController {
   Future<String> fetchMealImage(String query, int index) async {
     final String cleanQuery = Uri.encodeComponent(query);
 
-    // 1. Try TheMealDB (Dedicated food database - 100% Accurate)
-    // It only contains photos of finished recipes.
     final mealDbUrl = "https://www.themealdb.com/api/json/v1/1/search.php?s=$cleanQuery";
 
     try {
@@ -315,11 +299,10 @@ class PlannerController extends GetxController {
       debugPrint("MealDB failed: $e");
     }
 
-    // 2. BACKUP: Pexels
     return "https://images.pexels.com/photos/search/$cleanQuery/?orientation=landscape";
   }
 
-  // This computed list handles both search and category filtering
+  // Handles both search and category filtering
   List<Meal> get filteredMeals {
     return plannedMeals.where((meal) {
       bool matchesSearch = meal.title.toLowerCase().contains(
@@ -333,7 +316,6 @@ class PlannerController extends GetxController {
   }
 
   // --- Helpers ---
-
   int get totalKcal => plannedMeals.fold(0, (sum, item) => sum + item.kcal);
 
   void updateSelectedDay(DateTime selected, DateTime focused) {
@@ -343,11 +325,8 @@ class PlannerController extends GetxController {
   }
 
   Future<void> initCloudStatus(String recipeId) async {
-    // Reset state to false immediately to prevent "flickering"
-    // or showing the previous meal's state
     isCloudSaved.value = false;
 
-    // Now check the real status
     isCloudSaved.value = await _supabaseService.isMealSavedInCloud(recipeId);
   }
 
@@ -372,7 +351,7 @@ class PlannerController extends GetxController {
     }
   }
 
-  // 1. Handle the Meal object (for the Detail Screen)
+  // Handle the Save Meal object (for the Detail Screen)
   Future<void> toggleCloudSave(Meal meal) async {
     try {
       final isAlreadySaved = await _supabaseService.isMealSavedInCloud(meal.id.toString());
@@ -398,7 +377,7 @@ class PlannerController extends GetxController {
     }
   }
 
-// 2. Handle the String recipeId (for the Saved Meals Sheet)
+// Handle the String recipeId (for the Saved Meals Sheet)
   Future<void> removeByRecipeId(String recipeId) async {
     await _supabaseService.removeMealFromCloud(recipeId);
     fetchSavedMeals(); // Refresh the list
@@ -406,16 +385,14 @@ class PlannerController extends GetxController {
   }
 
   Future<void> fetchSavedMeals() async {
-    // Use your SupabaseService to fetch from 'saved_planner_meals'
     final data = await _supabaseService.fetchSavedMeals();
     cloudSavedMeals.assignAll(data);
   }
 
-// Add the 'type' parameter here
   Future<void> addMealFromCloud(Map<String, dynamic> mealData, String type) async {
     final meal = Meal(
       title: mealData['title'],
-      type: type, // Use the type passed from the Dropdown
+      type: type,
       kcal: int.tryParse(mealData['kcal'].toString()) ?? 0,
       imageUrl: mealData['image_url'],
       ingredients: mealData['ingredients'],
@@ -423,7 +400,6 @@ class PlannerController extends GetxController {
       date: DateFormat('yyyy-MM-dd').format(selectedDay.value),
     );
 
-    // Use your existing local DB insertion method
     await addMeal(meal);
     Get.snackbar("Added", "${meal.title} added to your plan!");
   }
