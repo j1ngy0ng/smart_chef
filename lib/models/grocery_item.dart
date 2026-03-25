@@ -2,7 +2,7 @@ class GroceryItem {
   final String id;
   final String name;
   double price;
-  String category; // New field for Pie Chart
+  String category;
 
   GroceryItem({
     required this.id,
@@ -16,7 +16,7 @@ class GroceryItem {
       id: map['name'],
       name: map['name'],
       price: (map['price'] as num).toDouble(),
-      category: map['category'] ?? "General", // Safely parse category
+      category: map['category'] ?? "General",
     );
   }
 
