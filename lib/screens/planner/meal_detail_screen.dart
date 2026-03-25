@@ -42,9 +42,9 @@ class MealDetailScreen extends StatelessWidget {
               flexibleSpace: FlexibleSpaceBar(
                 background: Stack(
                   fit: StackFit
-                      .expand, // Forces children to fill the entire header
+                      .expand,
                   children: [
-                    // 1. THE IMAGE AREA
+                    // 1. IMAGE AREA
                     Obx(
                       () => _buildHeaderImage(
                         controller.plannedMeals
@@ -58,7 +58,7 @@ class MealDetailScreen extends StatelessWidget {
                       decoration: const BoxDecoration(color: Colors.black26),
                     ),
 
-                    // 2. THE EDIT BUTTON
+                    // 2. EDIT BUTTON
                     Positioned(
                       right: 16,
                       bottom: 16,
@@ -89,13 +89,13 @@ class MealDetailScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        // --- CLOUD SAVE BUTTON ---
+                        // --- SAVE BUTTON
                         Padding(
                           padding: const EdgeInsets.only(
                             top: 15,
                             bottom: 5,
                             right: 10,
-                          ), // Added right padding
+                          ),
                           child: Obx(
                             () => FloatingActionButton.small(
                               heroTag: "cloud_btn_${currentMeal.id}",
@@ -114,7 +114,7 @@ class MealDetailScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        //add to grocery list button
+                        //--- Grocery list button
                         Padding(
                           padding: const EdgeInsets.only(top: 15, bottom: 5),
                           child: FloatingActionButton.small(
@@ -207,11 +207,11 @@ class MealDetailScreen extends StatelessWidget {
     );
   }
 
-  // --- THE "FIXED SIZE" PLACEHOLDER ---
+  // --- IMAGE UI HELPER
   Widget _buildFullPlaceholder() {
     return Container(
       width: double.infinity,
-      height: 250, // Matches expandedHeight
+      height: 250,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -243,6 +243,36 @@ class MealDetailScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildHeaderImage(String imageUrl) {
+    // 1. If empty or null, show placeholder immediately
+    if (imageUrl.isEmpty) {
+      return _buildFullPlaceholder();
+    }
+
+    // 2. Handle Network Images
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        errorBuilder: (context, error, stackTrace) => _buildFullPlaceholder(),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _buildFullPlaceholder(); // Shows placeholder while loading
+        },
+      );
+    }
+
+    // 3. Handle Local Files
+    File localFile = File(imageUrl);
+    if (localFile.existsSync()) {
+      return Image.file(localFile, fit: BoxFit.cover, width: double.infinity);
+    }
+
+    // 4. Fallback if file path is invalid
+    return _buildFullPlaceholder();
   }
 
   // --- HELPERS (Banners, Items, Dialogs) ---
@@ -538,7 +568,7 @@ class MealDetailScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // --- HEADER ---
+              // --- HEADER
               Stack(
                 children: [
                   const Center(
@@ -563,7 +593,7 @@ class MealDetailScreen extends StatelessWidget {
                 ],
               ),
 
-              // --- LIVE PREVIEW ---
+              // --- LIVE PREVIEW
               Obx(
                 () => Container(
                   height: 180,
@@ -585,7 +615,7 @@ class MealDetailScreen extends StatelessWidget {
                 ),
               ),
 
-              // --- TYPE SELECTOR ---
+              // --- TYPE SELECTOR
               Obx(
                 () => Wrap(
                   spacing: 10,
@@ -607,7 +637,7 @@ class MealDetailScreen extends StatelessWidget {
                 ),
               ),
 
-              // --- ALL INPUT FIELDS ---
+              // --- ALL INPUT FIELDS
               TextField(
                 controller: titleController,
                 decoration: const InputDecoration(labelText: "Title"),
@@ -688,36 +718,5 @@ class MealDetailScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  // Helper for cleaner UI fields
-  Widget _buildHeaderImage(String imageUrl) {
-    // 1. If empty or null, show placeholder immediately
-    if (imageUrl.isEmpty) {
-      return _buildFullPlaceholder();
-    }
-
-    // 2. Handle Network Images
-    if (imageUrl.startsWith('http')) {
-      return Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        errorBuilder: (context, error, stackTrace) => _buildFullPlaceholder(),
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildFullPlaceholder(); // Shows placeholder while loading
-        },
-      );
-    }
-
-    // 3. Handle Local Files
-    File localFile = File(imageUrl);
-    if (localFile.existsSync()) {
-      return Image.file(localFile, fit: BoxFit.cover, width: double.infinity);
-    }
-
-    // 4. Fallback if file path is invalid
-    return _buildFullPlaceholder();
   }
 }
