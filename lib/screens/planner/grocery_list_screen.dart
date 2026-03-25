@@ -109,7 +109,7 @@ class GroceryListScreen extends StatelessWidget {
             const SizedBox(height: 10),
 
             Obx(() => DropdownButtonFormField<String>(
-              value: category.value,
+              initialValue: category.value,
               items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
               onChanged: (val) => category.value = val!,
               decoration: const InputDecoration(labelText: "Category", icon: Icon(Icons.category_outlined)),
