@@ -29,7 +29,7 @@ class GroceryListScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // --- PIE CHART ---
+          // --- PIE CHART
           SizedBox(height: 200, child: Obx(() => PieChart(PieChartData(
               sections: controller.categoryTotals.entries.map((e) => PieChartSectionData(
                   value: e.value, title: e.key, color: categoryColors[e.key] ?? Colors.grey,
@@ -37,11 +37,11 @@ class GroceryListScreen extends StatelessWidget {
               )).toList()
           )))),
 
-          // --- TOTAL ---
+          // --- TOTAL
           Obx(() => Text("Total: RM ${controller.totalGroceryPrice.toStringAsFixed(2)}",
               style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF00A676)))),
 
-          // --- LIST VIEW WITH SWIPE-TO-DELETE ---
+          // --- LIST VIEW WITH SWIPE-TO-DELETE
           Expanded(
             child: Obx(() => ListView.builder(
               padding: const EdgeInsets.all(20),
@@ -79,7 +79,7 @@ class GroceryListScreen extends StatelessWidget {
     );
   }
 
-  // --- REFINED EDIT UI (BOTTOM SHEET) ---
+  // --- EDIT UI
   void _showEditBottomSheet(BuildContext context, GroceryItem item) {
     final nameCtrl = TextEditingController(text: item.name);
     final priceCtrl = TextEditingController(text: item.price.toString());
@@ -95,7 +95,6 @@ class GroceryListScreen extends StatelessWidget {
           children: [
             const Text("Edit Item", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
 
-            // Use TextFormField for better Form handling
             TextFormField(
               controller: nameCtrl,
               decoration: const InputDecoration(labelText: "Name", icon: Icon(Icons.local_grocery_store_outlined)),
@@ -120,7 +119,6 @@ class GroceryListScreen extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A676), minimumSize: const Size.fromHeight(50)),
               onPressed: () {
-                // Add basic validation check before saving
                 if (nameCtrl.text.isNotEmpty) {
                   controller.editGroceryItem(oldName: item.name, newName: nameCtrl.text, newPrice: double.tryParse(priceCtrl.text) ?? 0.0, newCategory: category.value);
                   Get.back();
