@@ -122,7 +122,13 @@ class _RecipeResultPageState extends State<RecipeResultPage> {
                 Positioned(
                   top: 12,
                   right: 12,
-                  child: AnimatedHeart(recipe: recipe),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.3), // Dark circle behind the heart
+                      shape: BoxShape.circle,
+                    ),
+                    child: AnimatedHeart(recipe: recipe),
+                  ),
                 ),
               ],
             ),
