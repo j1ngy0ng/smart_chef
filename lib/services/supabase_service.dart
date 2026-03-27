@@ -1,11 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
-import '../main.dart';
 
 class SupabaseService {
   final SupabaseClient _client = Supabase.instance.client;
@@ -92,7 +89,7 @@ class SupabaseService {
       );
 
       if (avatarUrl != null) {
-        // We add a timestamp here to force the UI to refresh immediately
+        // Add a timestamp here to force the UI to refresh immediately
         data['avatar_url'] = "$avatarUrl?t=${DateTime.now().millisecondsSinceEpoch}";
       }
     }

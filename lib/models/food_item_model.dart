@@ -1,5 +1,3 @@
-// models/food_item_model.dart
-
 import 'package:get/get.dart';
 import 'nutrition_model.dart';
 

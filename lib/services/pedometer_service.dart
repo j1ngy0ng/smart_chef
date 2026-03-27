@@ -1,8 +1,3 @@
-// lib/services/pedometer_service.dart
-// Real-time step tracking using phone's built-in accelerometer sensor.
-// Works on any Android device — no HMS Core or Google Fit required.
-// Uses: pedometer ^4.0.0
-
 import 'dart:async';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';

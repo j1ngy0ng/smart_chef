@@ -16,7 +16,6 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
-    // --- ADD THIS BLOCK ---
     signingConfigs {
         getByName("debug") {
             // This assumes you placed 'debug.keystore' inside 'android/app/'

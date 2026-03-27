@@ -267,7 +267,9 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
     if (_selectedDate.year == yesterday.year &&
         _selectedDate.month == yesterday.month &&
-        _selectedDate.day == yesterday.day) return 'Yesterday';
+        _selectedDate.day == yesterday.day) {
+      return 'Yesterday';
+    }
     return '${_selectedDate.day} ${_monthName(_selectedDate.month)} ${_selectedDate.year}';
   }
 
@@ -320,7 +322,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
       leading: Padding(
         padding: const EdgeInsets.all(8.0),
         child: CircleAvatar(
-          backgroundColor: Colors.black.withOpacity(0.4),
+          backgroundColor: Colors.black.withValues(alpha: 0.4),
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
             onPressed: () => Get.back(),
@@ -356,7 +358,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 3))
         ],
@@ -394,7 +396,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                       Text('Tap to pick date',
                           style: TextStyle(
                               fontSize: 10,
-                              color: _C.primary.withOpacity(0.7))),
+                              color: _C.primary.withValues(alpha: 0.7))),
                     ],
                   ),
                 ],
@@ -423,7 +425,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
         decoration: BoxDecoration(
           color: disabled
               ? Colors.transparent
-              : _C.primary.withOpacity(0.08),
+              : _C.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon,
@@ -446,7 +448,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-                color: _C.primary.withOpacity(0.4),
+                color: _C.primary.withValues(alpha: 0.4),
                 blurRadius: 20,
                 offset: const Offset(0, 8))
           ],
@@ -466,7 +468,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -510,7 +512,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
             padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
@@ -546,7 +548,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.055),
+                color: Colors.black.withValues(alpha: 0.055),
                 blurRadius: 14,
                 offset: const Offset(0, 4))
           ],
@@ -561,7 +563,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(11)),
                     child:
                     Center(child: Text(emoji, style: const TextStyle(fontSize: 18))),
@@ -589,7 +591,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10)),
                     child: Text(
                       '${totalCal.toStringAsFixed(1)} kcal',
@@ -647,7 +649,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
         duration: const Duration(milliseconds: 250),
         decoration: BoxDecoration(
           border: isEditing
-              ? Border(top: BorderSide(color: _C.primary.withOpacity(0.15)))
+              ? Border(top: BorderSide(color: _C.primary.withValues(alpha: 0.15)))
               : const Border(top: BorderSide(color: Color(0xFFF0F0F0))),
         ),
         child: Column(
@@ -662,7 +664,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: mealColor.withOpacity(0.08),
+                        color: mealColor.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       clipBehavior: Clip.hardEdge,
@@ -677,13 +679,13 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                           fit: BoxFit.cover,
                           errorBuilder: (ctx, _, __) => Icon(
                             Icons.restaurant_rounded,
-                            color: mealColor.withOpacity(0.7),
+                            color: mealColor.withValues(alpha: 0.7),
                             size: 20,
                           ),
                         )
                             : Icon(
                           Icons.restaurant_rounded,
-                          color: mealColor.withOpacity(0.7),
+                          color: mealColor.withValues(alpha: 0.7),
                           size: 20,
                         );
                       }(),
@@ -737,7 +739,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                       decoration: BoxDecoration(
                         color: _isOffline
                             ? _C.divider
-                            : isEditing ? _C.primary.withOpacity(0.15) : _C.bg,
+                            : isEditing ? _C.primary.withValues(alpha: 0.15) : _C.bg,
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: Icon(
@@ -761,8 +763,6 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
 
   // ── FULLY REWRITTEN edit panel with macro override support ─────────────────
   Widget _buildEditPanel(NutritionLog log) {
-    final isOverride = _macroOverrideFlags[log.id] ?? false;
-
     return StatefulBuilder(
       builder: (context, setLocal) {
         final overrideActive = _macroOverrideFlags[log.id] ?? false;
@@ -779,9 +779,9 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: _C.primary.withOpacity(0.04),
+            color: _C.primary.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _C.primary.withOpacity(0.15)),
+            border: Border.all(color: _C.primary.withValues(alpha: 0.15)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,7 +801,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: _C.primary.withOpacity(0.3)),
+                    borderSide: BorderSide(color: _C.primary.withValues(alpha: 0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -863,7 +863,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                         suffix: const Text('g', style: TextStyle(color: _C.text3)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: _C.primary.withOpacity(0.3)),
+                          borderSide: BorderSide(color: _C.primary.withValues(alpha: 0.3)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -911,7 +911,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                             decoration: BoxDecoration(
                               color: (!overrideActive && (double.tryParse(_servingControllers[log.id]!.text) ?? 0).toInt() == g)
                                   ? _C.primary
-                                  : overrideActive ? _C.bg.withOpacity(0.5) : _C.bg,
+                                  : overrideActive ? _C.bg.withValues(alpha: 0.5) : _C.bg,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Center(
@@ -972,12 +972,12 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: overrideActive
-                            ? _C.primary.withOpacity(0.12)
+                            ? _C.primary.withValues(alpha: 0.12)
                             : _C.bg,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: overrideActive
-                              ? _C.primary.withOpacity(0.4)
+                              ? _C.primary.withValues(alpha: 0.4)
                               : _C.divider,
                         ),
                       ),
@@ -1047,7 +1047,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: _C.primary.withOpacity(0.06),
+                  color: _C.primary.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Column(
@@ -1102,7 +1102,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
                     ),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [BoxShadow(
-                      color: _C.primary.withOpacity(0.35),
+                      color: _C.primary.withValues(alpha: 0.35),
                       blurRadius: 8, offset: const Offset(0, 3),
                     )],
                   ),
@@ -1137,7 +1137,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
       child: Container(
         width: 40, height: 40,
         decoration: BoxDecoration(
-          color: enabled ? _C.primary.withOpacity(0.1) : _C.bg,
+          color: enabled ? _C.primary.withValues(alpha: 0.1) : _C.bg,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon,
@@ -1179,7 +1179,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
             color: enabled ? Colors.white : _C.bg,
             borderRadius: BorderRadius.circular(9),
             border: Border.all(
-              color: enabled ? color.withOpacity(0.5) : _C.divider.withOpacity(0.4),
+              color: enabled ? color.withValues(alpha: 0.5) : _C.divider.withValues(alpha: 0.4),
               width: enabled ? 1.5 : 1,
             ),
           ),
@@ -1220,7 +1220,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
             width: 90,
             height: 90,
             decoration: BoxDecoration(
-              color: _C.primary.withOpacity(0.08),
+              color: _C.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.restaurant_menu_rounded,
@@ -1282,7 +1282,6 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
   void _showImageDialog(NutritionLog log) {
     final hasLocalImage = log.imagePath != null && File(log.imagePath!).existsSync();
     final hasRemoteImage = log.imageUrl != null && log.imageUrl!.isNotEmpty;
-    final hasImage = hasLocalImage || hasRemoteImage;
 
     showDialog(
       context: context,
@@ -1352,7 +1351,7 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
       child: Container(
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
         child: Column(
           children: [
             Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: color)),

@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
-
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -30,9 +28,6 @@ class NutritionController extends GetxController {
 
   // Today's individual meal logs
   final RxList<NutritionLog> todayLogs = <NutritionLog>[].obs;
-
-  // AI insights
-  final RxList<NutritionInsight> insights = <NutritionInsight>[].obs;
 
   // Water intake (reactive for real-time tap updates)
   final RxInt waterGlasses = 0.obs;
@@ -96,7 +91,6 @@ class NutritionController extends GetxController {
         _loadGoals(),
         _loadTodayLogs(),
         _loadHealthData(),
-        _loadInsights(),
       ]);
     } catch (e) {
       _handleError('loadDashboard', e);
@@ -398,7 +392,7 @@ class NutritionController extends GetxController {
         source: healthData.value!.source,
         recordedAt: healthData.value!.recordedAt,
       );
-      await _localDb.cacheHealthData(updated); // ← ADD — save to SQLite instantly
+      await _localDb.cacheHealthData(updated);
     }
 
     try {
@@ -415,38 +409,6 @@ class NutritionController extends GetxController {
     } catch (e) {
       // Silent fail — SQLite already updated above
     }
-  }
-
-  // ─── Insights ────────────────────────────────────────────────────────────────
-  Future<void> _loadInsights() async {
-    try {
-      final data = await _client
-          .from('smart_insights')
-          .select()
-          .eq('user_id', userId)
-          .eq('is_read', false)
-          .order('created_at', ascending: false)
-          .limit(5)
-          .timeout(const Duration(seconds: 3));
-
-      insights.value = (data as List).map((e) => NutritionInsight.fromMap(e)).toList();
-
-      if (insights.isEmpty) {
-        insights.value = NutritionInsight.mockInsights();
-      }
-    } catch (e) {
-      insights.value = NutritionInsight.mockInsights();
-    }
-  }
-
-  Future<void> markInsightRead(String insightId) async {
-    insights.removeWhere((i) => i.id == insightId);
-    try {
-      await _client
-          .from('smart_insights')
-          .update({'is_read': true})
-          .eq('id', insightId);
-    } catch (_) {}
   }
 
   // ─── Weekly data for charts ───────────────────────────────────────────────────
