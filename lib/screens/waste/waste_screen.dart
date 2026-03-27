@@ -99,7 +99,9 @@ class _FoodWastePageState extends State<FoodWastePage> {
       List<Map<String, String>> recipes = [];
 
       if (widget.mode == IngredientMode.ai) {
-        recipes = await GeminiService.generateRecipes(leftoverIngredients);
+        final fixedIngredients = await GeminiService.fixIngredients(leftoverIngredients);
+
+        recipes = await GeminiService.generateRecipes(fixedIngredients);
       } else {
         // 1. Fetch from Spoonacular
         final spoonacularRecipes =
@@ -339,14 +341,43 @@ class _FoodWastePageState extends State<FoodWastePage> {
           itemBuilder: (context, index) {
             return Padding(
               padding: const EdgeInsets.only(right: 10),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(kRadius),
-                child: Image.file(
-                  scannedImages[index],
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.cover,
-                ),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(kRadius),
+                    child: Image.file(
+                      scannedImages[index],
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+
+                  // ❌ Delete Button
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          scannedImages.removeAt(index);
+                        });
+                      },
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           },

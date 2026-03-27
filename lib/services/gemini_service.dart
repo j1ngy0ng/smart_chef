@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 class GeminiService {
-  static const String apiKey = "AIzaSyB6KnlaPVuiS27R4OtNF8nM3gru82CKIng";
+  static const String apiKey = "AIzaSyAmp9T4GoH0h9RU2rJ-BU_qwuRxnr8r_8I";
   static const String pixabayApiKey = "54874799-571b5c264e06fb47d926b6bb3";
 
   static const String _nutritionApiKey = 'AIzaSyC95VmA7tfXrMtqgvomfSYPFZD9jOUrxkI';
@@ -80,6 +80,66 @@ tomato, egg, onion
     }
 
     return ingredients;
+  }
+
+  // 🔹 AI Fix Ingredients (production-style smart correction)
+  static Future<List<String>> fixIngredients(List<String> ingredients) async {
+    final url = Uri.parse(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey",
+    );
+
+    final prompt = """
+You are a food ingredient validator.
+
+Fix and clean this ingredient list:
+${ingredients.join(", ")}
+
+Rules:
+- Correct spelling mistakes
+- Convert plural to singular
+- Remove anything that is NOT edible food
+- Remove objects, animals, furniture, tools, etc
+- Keep only real cooking ingredients
+
+Return ONLY a comma separated list in lowercase.
+""";
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "contents": [
+          {
+            "parts": [
+              {"text": prompt}
+            ]
+          }
+        ]
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      return ingredients;
+    }
+
+    final data = jsonDecode(response.body);
+    final text = data["candidates"][0]["content"]["parts"][0]["text"] ?? "";
+
+    List<String> cleaned = [];
+
+    for (String item in text.toLowerCase().split(",")) {
+      final trimmed = item.trim();
+      if (trimmed.isNotEmpty) {
+        cleaned.add(trimmed);
+      }
+    }
+
+    // ⭐ SAFETY CHECK (this is the part you asked about)
+    if (cleaned.isEmpty) {
+      return ["egg", "rice"]; // fallback ingredients
+    }
+
+    return cleaned;
   }
 
   // 🔹 Generate Recipes (Updated specifically for kcal/duration)
