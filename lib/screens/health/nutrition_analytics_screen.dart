@@ -40,7 +40,6 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
   bool _isLoading = true;
   List<_DayData> _chartData = [];
   List<NutritionLog> _recentLogs = [];
-  List<NutritionInsight> _insights = [];
   String _deletingId = '';
   bool _isOffline = false;
   StreamSubscription? _connectivitySub;
@@ -181,9 +180,6 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
       setState(() {
         _chartData = byDay.values.toList();
         _recentLogs = recent;
-        _insights = _ctrl.insights.isNotEmpty
-            ? _ctrl.insights
-            : NutritionInsight.mockInsights();
         _isLoading = false;
       });
       _fadeAnim.forward();
@@ -207,7 +203,6 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
         ..carbs = 150 + rand.nextInt(100).toDouble()
         ..fat = 40 + rand.nextInt(40).toDouble();
     });
-    _insights = NutritionInsight.mockInsights();
     setState(() => _isLoading = false);
     _fadeAnim.forward();
     _chartAnim.forward();
@@ -271,7 +266,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: CircleAvatar(
-              backgroundColor: Colors.black.withOpacity(0.4),
+              backgroundColor: Colors.black.withValues(alpha: 0.4),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
                 onPressed: () => Get.back(),
@@ -303,9 +298,9 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: _C.primary.withOpacity(0.08),
+                color: _C.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _C.primary.withOpacity(0.2)),
+                border: Border.all(color: _C.primary.withValues(alpha: 0.2)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -445,7 +440,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
         color: _C.card,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Column(
@@ -454,7 +449,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
           Container(
             width: 32, height: 32,
             decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(9)),
             child: Icon(icon, color: color, size: 17),
           ),
@@ -472,7 +467,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
   // ── Calorie Line Chart ────────────────────────────────────────────────────────
   Widget _buildCalorieLineChart() {
     return _chartCard(
-      title: 'Calorie Trend',
+      title: 'Intake Calorie Trend',
       subtitle: _period,
       icon: Icons.show_chart_rounded,
       iconColor: _C.primary,
@@ -646,7 +641,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: pct / 100,
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation(color),
             minHeight: 5,
           ),
@@ -712,7 +707,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
         padding: const EdgeInsets.only(right: 20),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: _C.errorRed.withOpacity(0.1),
+          color: _C.errorRed.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -736,7 +731,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
             color: _C.card,
             borderRadius: BorderRadius.circular(14),
             boxShadow: [BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8, offset: const Offset(0, 2))],
           ),
           child: Row(
@@ -744,7 +739,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
               Container(
                 width: 42, height: 42,
                 decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12)),
                 child: Center(
                     child: Text(emoji,
@@ -802,8 +797,8 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
                   decoration: BoxDecoration(
                     // Grey out when offline
                     color: _isOffline
-                        ? Colors.grey.withOpacity(0.08)
-                        : _C.errorRed.withOpacity(0.08),
+                        ? Colors.grey.withValues(alpha: 0.08)
+                        : _C.errorRed.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: isDeleting
@@ -862,7 +857,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
         color: _C.card,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 14, offset: const Offset(0, 4))],
       ),
       child: Column(
@@ -873,7 +868,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
               Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.1),
+                    color: iconColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(9)),
                 child: Icon(icon, color: iconColor, size: 17),
               ),
@@ -912,7 +907,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
           decoration: BoxDecoration(
-              color: _C.primary.withOpacity(0.09),
+              color: _C.primary.withValues(alpha: 0.09),
               borderRadius: BorderRadius.circular(8)),
           child: Text(sub,
               style: const TextStyle(
@@ -982,14 +977,14 @@ class _LineChartPainter extends CustomPainter {
       canvas.drawLine(Offset(leftPad, y), Offset(size.width - rightPad, y),
           gridPaint);
       final val = (maxCal * i / 4).toInt();
-      _drawLabel(canvas, '${val}', Offset(0, y - 8),
+      _drawLabel(canvas, '$val', Offset(0, y - 8),
           const TextStyle(fontSize: 9, color: _C.text3));
     }
 
     // Goal line (dashed)
     final goalY = yOf(goal);
     final dashPaint = Paint()
-      ..color = _C.warning.withOpacity(0.7)
+      ..color = _C.warning.withValues(alpha: 0.7)
       ..strokeWidth = 1.5;
     double dx = leftPad;
     while (dx < size.width - rightPad) {
@@ -1017,8 +1012,8 @@ class _LineChartPainter extends CustomPainter {
         Paint()
           ..shader = LinearGradient(
             colors: [
-              _C.primary.withOpacity(0.25 * progress),
-              _C.primary.withOpacity(0),
+              _C.primary.withValues(alpha: 0.25 * progress),
+              _C.primary.withValues(alpha: 0),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -1112,7 +1107,7 @@ class _BarChartPainter extends CustomPainter {
     // Goal line
     final goalY = chartH - (goal / maxVal) * chartH * progress;
     final dashPaint = Paint()
-      ..color = _C.text3.withOpacity(0.5)
+      ..color = _C.text3.withValues(alpha: 0.5)
       ..strokeWidth = 1;
     double dx = leftPad;
     while (dx < size.width) {
@@ -1135,7 +1130,7 @@ class _BarChartPainter extends CustomPainter {
 
       // Always draw the green fill
       canvas.drawRRect(intakeRect,
-          Paint()..color = _C.primary.withOpacity(0.85));
+          Paint()..color = _C.primary.withValues(alpha: 0.85));
 
       // If over goal, draw red border on top instead of filling red
       if (isOver) {
@@ -1163,7 +1158,7 @@ class _BarChartPainter extends CustomPainter {
         topLeft: const Radius.circular(4),
         topRight: const Radius.circular(4),
       );
-      canvas.drawRRect(burnedRect, Paint()..color = _C.burn.withOpacity(0.75));
+      canvas.drawRRect(burnedRect, Paint()..color = _C.burn.withValues(alpha: 0.75));
 
       // X label
       final show = displayData.length <= 7 || i % 2 == 0;

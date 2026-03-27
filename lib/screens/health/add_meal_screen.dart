@@ -1,9 +1,3 @@
-// screens/health/add_meal_screen.dart
-// Full CRUD Add/Edit Meal screen.
-// Usage:
-//   Add new:  Get.to(() => const AddMealScreen())
-//   Edit log: Get.to(() => AddMealScreen(editLog: log))
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -167,14 +161,14 @@ class _AddMealScreenState extends State<AddMealScreen>
               height: 42,
               decoration: BoxDecoration(
                 color: (_ctrl.isScanning.value || _isOffline)
-                    ? _C.primary.withOpacity(0.1)
+                    ? _C.primary.withValues(alpha: 0.1)
                     : _C.primary,
                 borderRadius: BorderRadius.circular(13),
                 boxShadow: _ctrl.isScanning.value
                     ? null
                     : [
                   BoxShadow(
-                    color: _C.primary.withOpacity(0.35),
+                    color: _C.primary.withValues(alpha: 0.35),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   )
@@ -229,7 +223,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                       boxShadow: active
                           ? [
                         BoxShadow(
-                          color: _C.primary.withOpacity(0.3),
+                          color: _C.primary.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         )
@@ -275,7 +269,7 @@ class _AddMealScreenState extends State<AddMealScreen>
               decoration: BoxDecoration(
                 color: _C.bg,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _isOffline ? _C.divider.withOpacity(0.5) : _C.divider),
+                border: Border.all(color: _isOffline ? _C.divider.withValues(alpha: 0.5) : _C.divider),
               ),
               child: Row(
                 children: [
@@ -294,6 +288,12 @@ class _AddMealScreenState extends State<AddMealScreen>
                     child: TextField(
                       controller: _ctrl.searchController,
                       focusNode: _searchFocus,
+                      onSubmitted: (_) {
+                        if (_isOffline) return;
+                        _searchFocus.unfocus();
+                        _ctrl.triggerSearch();
+                      },
+                      textInputAction: TextInputAction.search,
                       onChanged: (val) {
                         if (_isOffline) {
                           Get.snackbar('📵 You\'re Offline',
@@ -305,7 +305,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                           _ctrl.clearSearch();
                           return;
                         }
-                        _ctrl.onSearchChanged(val);
+                        if (val.isEmpty) _ctrl.clearSearch();
                       },
                       style: const TextStyle(
                           fontSize: 14,
@@ -321,13 +321,41 @@ class _AddMealScreenState extends State<AddMealScreen>
                       ),
                     ),
                   ),
-                  Obx(() => _ctrl.searchQuery.value.isNotEmpty
+                  ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _ctrl.searchController,
+                      builder: (_, value, __) => value.text.isNotEmpty
                       ? GestureDetector(
                     onTap: _ctrl.clearSearch,
                     child: const Padding(
                       padding: EdgeInsets.all(10),
                       child: Icon(Icons.close_rounded,
                           color: _C.text3, size: 16),
+                    ),
+                  )
+                      : const SizedBox.shrink()),
+                  ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _ctrl.searchController,
+                      builder: (_, value, __) => value.text.isNotEmpty
+                      ? GestureDetector(
+                    onTap: () {
+                      _searchFocus.unfocus();
+                      _ctrl.triggerSearch();
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _C.primary,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: const Text(
+                        'Search',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700),
+                      ),
                     ),
                   )
                       : const SizedBox.shrink()),
@@ -408,7 +436,7 @@ class _AddMealScreenState extends State<AddMealScreen>
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.045),
+                color: Colors.black.withValues(alpha: 0.045),
                 blurRadius: 10,
                 offset: const Offset(0, 3))
           ],
@@ -420,7 +448,7 @@ class _AddMealScreenState extends State<AddMealScreen>
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _C.primary.withOpacity(0.08),
+                color: _C.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
@@ -465,12 +493,11 @@ class _AddMealScreenState extends State<AddMealScreen>
                 ],
               ),
             ),
-            // Calorie badge + add icon
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${food.calculatedCaloriesPer100g.toStringAsFixed(1)}',
+                  food.calculatedCaloriesPer100g.toStringAsFixed(1),
                   style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -521,7 +548,7 @@ class _AddMealScreenState extends State<AddMealScreen>
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: _C.primary.withOpacity(0.08),
+              color: _C.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Center(
@@ -554,13 +581,13 @@ class _AddMealScreenState extends State<AddMealScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: item.isEditing.value
-              ? _C.primary.withOpacity(0.4)
+              ? _C.primary.withValues(alpha: 0.4)
               : Colors.transparent,
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 3))
         ],
@@ -577,7 +604,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: _C.primary.withOpacity(0.08),
+                    color: _C.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(13),
                   ),
                   clipBehavior: Clip.hardEdge,
@@ -610,7 +637,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                           contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: _C.primary.withOpacity(0.4)),
+                            borderSide: BorderSide(color: _C.primary.withValues(alpha: 0.4)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -657,14 +684,14 @@ class _AddMealScreenState extends State<AddMealScreen>
                     _iconBtn(
                       icon: Icons.edit_rounded,
                       color: _C.primary,
-                      bg: _C.primary.withOpacity(0.1),
+                      bg: _C.primary.withValues(alpha: 0.1),
                       onTap: () => _ctrl.toggleEditing(item.cartId),
                     ),
                     const SizedBox(height: 6),
                     _iconBtn(
                       icon: Icons.delete_outline_rounded,
                       color: _C.errorRed,
-                      bg: _C.errorRed.withOpacity(0.08),
+                      bg: _C.errorRed.withValues(alpha: 0.08),
                       onTap: () {
                         HapticFeedback.lightImpact();
                         _ctrl.removeFromCart(item.cartId);
@@ -732,11 +759,11 @@ class _AddMealScreenState extends State<AddMealScreen>
                 child: Obx(() => Container(
                   height: 42,
                   decoration: BoxDecoration(
-                    color: macroOverride.value ? _C.bg.withOpacity(0.5) : _C.bg,
+                    color: macroOverride.value ? _C.bg.withValues(alpha: 0.5) : _C.bg,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: macroOverride.value
-                        ? _C.divider.withOpacity(0.4)
-                        : _C.primary.withOpacity(0.3)),
+                        ? _C.divider.withValues(alpha: 0.4)
+                        : _C.primary.withValues(alpha: 0.3)),
                   ),
                   child: TextField(
                     controller: servingController,
@@ -813,7 +840,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                     decoration: BoxDecoration(
                       color: (!macroOverride.value && item.servingGrams.value.toInt() == g)
                           ? _C.primary
-                          : macroOverride.value ? _C.bg.withOpacity(0.5) : _C.bg,
+                          : macroOverride.value ? _C.bg.withValues(alpha: 0.5) : _C.bg,
                       borderRadius:
                       BorderRadius.circular(8),
                     ),
@@ -879,12 +906,12 @@ class _AddMealScreenState extends State<AddMealScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: macroOverride.value
-                        ? _C.primary.withOpacity(0.12)
+                        ? _C.primary.withValues(alpha: 0.12)
                         : _C.bg,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: macroOverride.value
-                          ? _C.primary.withOpacity(0.4)
+                          ? _C.primary.withValues(alpha: 0.4)
                           : _C.divider,
                     ),
                   ),
@@ -980,7 +1007,7 @@ class _AddMealScreenState extends State<AddMealScreen>
           Obx(() => Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _C.primary.withOpacity(0.05),
+              color: _C.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -1060,7 +1087,7 @@ class _AddMealScreenState extends State<AddMealScreen>
             color: enabled ? Colors.white : _C.bg,
             borderRadius: BorderRadius.circular(9),
             border: Border.all(
-              color: enabled ? color.withOpacity(0.5) : _C.divider.withOpacity(0.4),
+              color: enabled ? color.withValues(alpha: 0.5) : _C.divider.withValues(alpha: 0.4),
               width: enabled ? 1.5 : 1,
             ),
           ),
@@ -1099,7 +1126,7 @@ class _AddMealScreenState extends State<AddMealScreen>
         color: _C.card,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, -6),
           )
@@ -1153,7 +1180,7 @@ class _AddMealScreenState extends State<AddMealScreen>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: (_ctrl.isSaving.value || _isOffline)
-                      ? [_C.primary.withOpacity(0.5), _C.dark.withOpacity(0.5)]
+                      ? [_C.primary.withValues(alpha: 0.5), _C.dark.withValues(alpha: 0.5)]
                       : [_C.primary, _C.dark],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -1163,7 +1190,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                     ? null
                     : [
                   BoxShadow(
-                    color: _C.primary.withOpacity(0.4),
+                    color: _C.primary.withValues(alpha: 0.4),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   )
@@ -1210,7 +1237,7 @@ class _AddMealScreenState extends State<AddMealScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(label,
@@ -1260,7 +1287,7 @@ class _AddMealScreenState extends State<AddMealScreen>
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: _C.primary.withOpacity(0.1),
+          color: _C.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: _C.primary, size: 20),

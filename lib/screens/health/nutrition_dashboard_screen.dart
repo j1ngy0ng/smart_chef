@@ -181,7 +181,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                  color: _C.dark.withOpacity(0.45),
+                  color: _C.dark.withValues(alpha: 0.45),
                   blurRadius: 24,
                   offset: const Offset(0, 10))
             ],
@@ -284,7 +284,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-              color: color.withOpacity(0.18),
+              color: color.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(10)),
           child: Icon(icon, color: color, size: 17),
         ),
@@ -321,7 +321,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                 color: _C.card,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10, offset: const Offset(0, 3),
                 )],
               ),
@@ -331,7 +331,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   Container(
                     width: 30, height: 30,
                     decoration: BoxDecoration(
-                      color: _C.primary.withOpacity(0.1),
+                      color: _C.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: const Icon(Icons.show_chart_rounded,
@@ -369,7 +369,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                 color: _C.card,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10, offset: const Offset(0, 3),
                 )],
               ),
@@ -379,7 +379,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   Container(
                     width: 30, height: 30,
                     decoration: BoxDecoration(
-                      color: _C.carbs.withOpacity(0.1),
+                      color: _C.carbs.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: const Icon(Icons.tune_rounded,
@@ -437,9 +437,9 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                 children: active.map((label) => Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: _C.primary.withOpacity(0.08),
+                    color: _C.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _C.primary.withOpacity(0.2)),
+                    border: Border.all(color: _C.primary.withValues(alpha: 0.2)),
                   ),
                   child: Text(label,
                       style: const TextStyle(fontSize: 11, color: _C.primary,
@@ -510,9 +510,9 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
           : EdgeInsets.zero,
       decoration: isExceeded
           ? BoxDecoration(
-        color: _C.errorRed.withOpacity(0.05),
+        color: _C.errorRed.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _C.errorRed.withOpacity(0.25)),
+        border: Border.all(color: _C.errorRed.withValues(alpha: 0.25)),
       )
           : const BoxDecoration(),
       child: Column(
@@ -578,7 +578,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
             Container(
               height: 9,
               decoration: BoxDecoration(
-                  color: activeColor.withOpacity(0.1),
+                  color: activeColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(5)),
             ),
             FractionallySizedBox(
@@ -588,13 +588,13 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isExceeded
-                        ? [_C.errorRed.withOpacity(0.7), _C.errorRed]
-                        : [color.withOpacity(0.65), color],
+                        ? [_C.errorRed.withValues(alpha: 0.7), _C.errorRed]
+                        : [color.withValues(alpha: 0.65), color],
                   ),
                   borderRadius: BorderRadius.circular(5),
                   boxShadow: [
                     BoxShadow(
-                        color: activeColor.withOpacity(0.35),
+                        color: activeColor.withValues(alpha: 0.35),
                         blurRadius: 5,
                         offset: const Offset(0, 2))
                   ],
@@ -614,7 +614,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                     borderRadius: BorderRadius.circular(5),
                     boxShadow: [
                       BoxShadow(
-                          color: _C.errorRed.withOpacity(0.6),
+                          color: _C.errorRed.withValues(alpha: 0.6),
                           blurRadius: 6,
                           spreadRadius: 1),
                     ],
@@ -659,7 +659,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                      color: _C.water.withOpacity(0.12),
+                      color: _C.water.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.water_drop_rounded,
                       color: _C.water, size: 18),
@@ -713,16 +713,16 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                   decoration: BoxDecoration(
                     color: _isOffline
                         ? (i < _ctrl.waterGlasses.value
-                        ? _C.water.withOpacity(0.4)
-                        : _C.water.withOpacity(0.05))
+                        ? _C.water.withValues(alpha: 0.4)
+                        : _C.water.withValues(alpha: 0.05))
                         : (i < _ctrl.waterGlasses.value
                         ? _C.water
-                        : _C.water.withOpacity(0.09)),
+                        : _C.water.withValues(alpha: 0.09)),
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: i < _ctrl.waterGlasses.value
                         ? [
                       BoxShadow(
-                          color: _C.water.withOpacity(0.3),
+                          color: _C.water.withValues(alpha: 0.3),
                           blurRadius: 6,
                           offset: const Offset(0, 2))
                     ]
@@ -737,10 +737,10 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                     Icons.water_drop_rounded,
                     size: 16,
                     color: _isOffline
-                        ? _C.water.withOpacity(0.3)
+                        ? _C.water.withValues(alpha: 0.3)
                         : (i < _ctrl.waterGlasses.value
                         ? Colors.white
-                        : _C.water.withOpacity(0.35)),
+                        : _C.water.withValues(alpha: 0.35)),
                   ),
                 ),
               ),
@@ -752,7 +752,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
             borderRadius: BorderRadius.circular(5),
             child: LinearProgressIndicator(
               value: _ctrl.waterProgress,
-              backgroundColor: _C.water.withOpacity(0.1),
+              backgroundColor: _C.water.withValues(alpha: 0.1),
               valueColor: const AlwaysStoppedAnimation(_C.water),
               minHeight: 6,
             ),
@@ -774,10 +774,6 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
       final h = _ctrl.healthData.value;
       final steps = h?.steps ?? 0;
       final burned = h?.caloriesBurned ?? 0;
-      final source = h?.source ?? 'manual';
-      final badge = source == 'huawei_health' ? 'Huawei Health'
-          : source == 'google_fit'    ? 'Google Fit'
-          : 'Manual';
 
       return Row(
         children: [
@@ -830,7 +826,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10)),
                 child: Icon(icon, color: color, size: 19),
               ),
@@ -838,7 +834,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
                 padding:
                 const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(7)),
                 child: Text(badge,
                     style: TextStyle(
@@ -865,7 +861,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: color.withOpacity(0.1),
+              backgroundColor: color.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation(color),
               minHeight: 5,
             ),
@@ -904,7 +900,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.055),
+              color: Colors.black.withValues(alpha: 0.055),
               blurRadius: 14,
               offset: const Offset(0, 4))
         ],
@@ -925,7 +921,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
           decoration: BoxDecoration(
-              color: _C.primary.withOpacity(0.09),
+              color: _C.primary.withValues(alpha: 0.09),
               borderRadius: BorderRadius.circular(8)),
           child: Text(sub,
               style: const TextStyle(
@@ -963,7 +959,7 @@ class _RingPainter extends CustomPainter {
         c,
         r,
         Paint()
-          ..color = Colors.white.withOpacity(0.12)
+          ..color = Colors.white.withValues(alpha: 0.12)
           ..style = PaintingStyle.stroke
           ..strokeWidth = sw);
 

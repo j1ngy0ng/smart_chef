@@ -1,6 +1,3 @@
-// models/nutrition_model.dart
-// Fits alongside: post_model.dart, comment_model.dart, user_model.dart, etc.
-
 class NutritionLog {
   final String id;
   final String userId;
@@ -171,67 +168,4 @@ class DailyHealthData {
     waterIntake: 0,
     recordedAt: DateTime.now(),
   );
-}
-
-class NutritionInsight {
-  final String id;
-  final String title;
-  final String description;
-  final String severity; // 'info' | 'warning' | 'success'
-  final String insightType;
-  final bool isRead;
-  final DateTime createdAt;
-
-  NutritionInsight({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.severity,
-    required this.insightType,
-    this.isRead = false,
-    required this.createdAt,
-  });
-
-  factory NutritionInsight.fromMap(Map<String, dynamic> map) {
-    return NutritionInsight(
-      id: map['id'] ?? '',
-      title: map['title'] ?? '',
-      description: map['description'] ?? '',
-      severity: map['severity'] ?? 'info',
-      insightType: map['insight_type'] ?? 'general',
-      isRead: map['is_read'] ?? false,
-      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-    );
-  }
-
-  // Static mock insights for development
-  static List<NutritionInsight> mockInsights() => [
-    NutritionInsight(
-      id: '1',
-      title: 'Fat Intake Alert',
-      description:
-      'You exceeded your fat intake goal 3 times this week. Try swapping fried foods for grilled options.',
-      severity: 'warning',
-      insightType: 'fat',
-      createdAt: DateTime.now(),
-    ),
-    NutritionInsight(
-      id: '2',
-      title: 'Great Protein Streak! 💪',
-      description:
-      'You\'ve hit your protein goal 5 days in a row. Muscle recovery is on point!',
-      severity: 'success',
-      insightType: 'protein',
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-    NutritionInsight(
-      id: '3',
-      title: 'Weekend Overeating Detected',
-      description:
-      'Your Saturday & Sunday calorie intake is ~35% higher than weekdays. Plan your weekend meals ahead.',
-      severity: 'warning',
-      insightType: 'weekend',
-      createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-    ),
-  ];
 }

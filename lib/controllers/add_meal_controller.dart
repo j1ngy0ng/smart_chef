@@ -24,7 +24,6 @@ class AddMealController extends GetxController {
   final Rx<NutritionLog?> editingLog = Rx<NutritionLog?>(null);
 
   final TextEditingController searchController = TextEditingController();
-  Worker? _searchDebounce;
 
   // ─── Computed ─────────────────────────────────────────────────────────────────
   double get totalCalories => cartItems.fold(0, (s, i) => s + i.calories);
@@ -39,17 +38,11 @@ class AddMealController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _searchDebounce = debounce(
-      searchQuery,
-          (_) => _runSearch(),
-      time: const Duration(milliseconds: 400),
-    );
   }
 
   @override
   void onClose() {
     searchController.dispose();
-    _searchDebounce?.dispose();
     super.onClose();
   }
 
@@ -79,7 +72,21 @@ class AddMealController extends GetxController {
   void selectMealType(String type) => selectedMealType.value = type;
 
   // ─── Search ───────────────────────────────────────────────────────────────────
-  void onSearchChanged(String query) => searchQuery.value = query;
+  Future<void> triggerSearch() async {
+    final q = searchController.text.trim();
+    if (q.isEmpty) return;
+    searchQuery.value = q; // ← set here, not on every keystroke
+    await _runSearch();
+  }
+
+  void onSearchChanged(String query) {
+    // Only clear results if user clears the field
+    // Don't update searchQuery — that's only updated when Search is tapped
+    if (query.isEmpty) {
+      searchQuery.value = '';
+      searchResults.clear();
+    }
+  }
 
   void clearSearch() {
     searchController.clear();
@@ -208,7 +215,7 @@ class AddMealController extends GetxController {
     // Clear any manual override so macros go back to being weight-based
     item.clearMacroOverride();
     item.servingGrams.value = grams.clamp(1, 9999);
-    cartItems.refresh(); // trigger Obx rebuild for calories/protein/carbs/fat
+    cartItems.refresh();
   }
 
   /// Called when user manually edits P/C/F in the override fields.
@@ -217,7 +224,7 @@ class AddMealController extends GetxController {
     final item = cartItems.firstWhereOrNull((i) => i.cartId == cartId);
     if (item == null) return;
     item.setMacroOverride(protein, carbs, fat);
-    cartItems.refresh(); // trigger Obx rebuild so bottom bar totals update
+    cartItems.refresh();
   }
 
   /// Called when user toggles back from manual mode to serving mode.

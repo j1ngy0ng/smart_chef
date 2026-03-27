@@ -96,7 +96,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
           '❌ Analysis Failed',
           'Something went wrong. Please try again.',
           snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.red.withOpacity(0.8),
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
           colorText: Colors.black,
         );
         return;
@@ -112,7 +112,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
           '🚫 Not Food',
           'No food detected in the photo. Please take a photo of food.',
           snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.orange.withOpacity(0.8),
+          backgroundColor: Colors.orange.withValues(alpha: 0.8),
           colorText: Colors.black,
           duration: const Duration(seconds: 3),
         );
@@ -129,7 +129,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
           '📷 Unclear Photo',
           'Image is too blurry or dark. Try better lighting.',
           snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.orange.withOpacity(0.8),
+          backgroundColor: Colors.orange.withValues(alpha: 0.8),
           colorText: Colors.black,
           duration: const Duration(seconds: 3),
         );
@@ -150,7 +150,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
           '❌ Unknown Food',
           'Could not identify the food. Try a clearer photo.',
           snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.red.withOpacity(0.8),
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
           colorText: Colors.black,
         );
       }
@@ -164,7 +164,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         '❌ Error',
         e.toString(),
         snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red.withOpacity(0.8),
+        backgroundColor: Colors.red.withValues(alpha: 0.8),
         colorText: Colors.black,
       );
     }
@@ -199,7 +199,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         });
         Get.snackbar('❌ Analysis Failed', 'Something went wrong. Please try again.',
             snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.red.withOpacity(0.8),
+            backgroundColor: Colors.red.withValues(alpha: 0.8),
             colorText: Colors.black);
         return;
       }
@@ -211,7 +211,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         });
         Get.snackbar('🚫 Not Food', 'No food detected. Please select a food photo.',
             snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.orange.withOpacity(0.8),
+            backgroundColor: Colors.orange.withValues(alpha: 0.8),
             colorText: Colors.black,
             duration: const Duration(seconds: 3));
         return;
@@ -224,7 +224,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         });
         Get.snackbar('📷 Unclear Photo', 'Image is too blurry or dark.',
             snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.orange.withOpacity(0.8),
+            backgroundColor: Colors.orange.withValues(alpha: 0.8),
             colorText: Colors.black,
             duration: const Duration(seconds: 3));
         return;
@@ -241,7 +241,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
         });
         Get.snackbar('❌ Unknown Food', 'Could not identify the food.',
             snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.red.withOpacity(0.8),
+            backgroundColor: Colors.red.withValues(alpha: 0.8),
             colorText: Colors.black);
       }
     } catch (e) {
@@ -317,10 +317,10 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
-                      color: _C.primary.withOpacity(0.15),
+                      color: _C.primary.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                       border: Border.all(
-                          color: _C.primary.withOpacity(0.4), width: 2),
+                          color: _C.primary.withValues(alpha: 0.4), width: 2),
                     ),
                     child: Icon(
                       Icons.camera_alt_rounded,
@@ -364,7 +364,7 @@ class _FoodCameraScreenState extends State<FoodCameraScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: _C.primary.withOpacity(0.4),
+                            color: _C.primary.withValues(alpha: 0.4),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           )

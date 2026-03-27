@@ -58,7 +58,6 @@ class SmartChefApp extends StatelessWidget {
           name: '/login',
           page: () => const LoginScreen(),
         ),
-        // Make sure to add your Main/Home screen here too!
         GetPage(
           name: '/home',
            page: () => const DashboardScreen(),

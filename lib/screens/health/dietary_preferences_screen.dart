@@ -36,7 +36,6 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
   double _fatRatio = 0.20;     // 20%
 
   final TextEditingController _calCtrl = TextEditingController();
-  bool _isSaving = false;
   Worker? _autoSaveWorker;
   final RxInt _changeCounter = 0.obs;
   bool _isOffline = false;
@@ -212,32 +211,6 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
     _triggerSave();
   }
 
-  Future<void> _save() async {
-    final parsed = double.tryParse(_calCtrl.text);
-    if (parsed == null || parsed < 500 || parsed > 10000) {
-      Get.snackbar('⚠️ Invalid', 'Calorie goal must be between 500–10000.',
-          snackPosition: SnackPosition.TOP);
-      return;
-    }
-    setState(() => _isSaving = true);
-    final newGoals = UserGoals(
-      userId: _ctrl.userId,
-      calorieGoal:  parsed,
-      proteinGoal:  _proteinGoalG,
-      carbsGoal:    _carbsGoalG,
-      fatGoal:      _fatGoalG,
-      waterGoal:    _ctrl.goals.value?.waterGoal ?? 8,
-      isVegetarian: _isVegetarian,
-      isVegan:      _isVegan,
-      isLowCarb:    _isLowCarb,
-      isHighProtein: _isHighProtein,
-      isKeto:       _isKeto,
-    );
-    await _ctrl.saveGoals(newGoals);
-    setState(() => _isSaving = false);
-    Get.back();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -279,7 +252,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: CircleAvatar(
-              backgroundColor: Colors.black.withOpacity(0.4),
+              backgroundColor: Colors.black.withValues(alpha: 0.4),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
                 onPressed: () => Get.back(),
@@ -340,7 +313,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
                   decoration: BoxDecoration(
                     color: _C.bg,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: _C.primary.withOpacity(0.3)),
+                    border: Border.all(color: _C.primary.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -479,10 +452,10 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isOn ? color.withOpacity(0.08) : _C.bg,
+          color: isOn ? color.withValues(alpha: 0.08) : _C.bg,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isOn ? color.withOpacity(0.4) : _C.divider,
+            color: isOn ? color.withValues(alpha: 0.4) : _C.divider,
             width: isOn ? 1.5 : 1,
           ),
         ),
@@ -491,7 +464,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
             Container(
               width: 40, height: 40,
               decoration: BoxDecoration(
-                color: isOn ? color.withOpacity(0.15) : _C.divider,
+                color: isOn ? color.withValues(alpha: 0.15) : _C.divider,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(child: Text(emoji,
@@ -554,7 +527,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _C.primary.withOpacity(0.08),
+                  color: _C.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -613,7 +586,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text('${grams.toInt()}g',
@@ -628,9 +601,9 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: color,
-            inactiveTrackColor: color.withOpacity(0.12),
+            inactiveTrackColor: color.withValues(alpha: 0.12),
             thumbColor: color,
-            overlayColor: color.withOpacity(0.15),
+            overlayColor: color.withValues(alpha: 0.15),
             trackHeight: 6,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
@@ -658,7 +631,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(
-          color: _C.dark.withOpacity(0.4),
+          color: _C.dark.withValues(alpha: 0.4),
           blurRadius: 16, offset: const Offset(0, 6),
         )],
       ),
@@ -724,7 +697,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -750,7 +723,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
         color: _C.card,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 14, offset: const Offset(0, 4),
         )],
       ),
@@ -781,7 +754,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
       child: Container(
         width: 46, height: 46,
         decoration: BoxDecoration(
-          color: _C.primary.withOpacity(0.1),
+          color: _C.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(13),
         ),
         child: Icon(icon, color: _C.primary, size: 22),
@@ -813,7 +786,7 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
                   decoration: BoxDecoration(
                     color: _C.bg,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: _C.steps.withOpacity(0.3)),
+                    border: Border.all(color: _C.steps.withValues(alpha: 0.3)),
                   ),
                   child: Center(
                     child: Text(
