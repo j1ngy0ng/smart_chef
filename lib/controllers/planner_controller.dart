@@ -125,10 +125,34 @@ class PlannerController extends GetxController {
   }
 
   Future<void> updateMeal(Meal meal) async {
-    await _dbService.updateMeal(
-      meal,
-    );
-    await fetchMealsForDate(selectedDay.value);
+    try {
+      // 1. UPDATE LOCAL DB
+      await _dbService.updateMeal(meal);
+
+      // 2. REFRESH LOCAL UI
+      await fetchMealsForDate(selectedDay.value);
+
+      // 3. SMART CLOUD SYNC
+      // Check if the meal is already in the cloud
+      bool isSynced = await _supabaseService.isMealSavedInCloud(meal.id.toString());
+
+      if (isSynced) {
+        // We call the cloud save again.
+        // Ensure your 'saveMealToCloud' inside SupabaseService uses .upsert()
+        await _supabaseService.saveMealToCloud(
+          recipeId: meal.id.toString(),
+          title: meal.title,
+          kcal: meal.kcal.toString(),
+          imageUrl: meal.imageUrl, // This carries the new Gallery path or Web URL
+          ingredients: meal.ingredients,
+          steps: meal.steps,
+        );
+        debugPrint("Cloud Sync: Updated ${meal.title} successfully.");
+      }
+    } catch (e) {
+      debugPrint("Sync Error: $e");
+      // Standard error handling
+    }
   }
 
   // --- AI & Integration ---

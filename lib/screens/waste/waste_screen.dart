@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:smart_chef/screens/waste/recipe_result.dart';
 import 'package:smart_chef/services/waste_recipe_service.dart';
 import '/services/gemini_service.dart';
+import 'package:lottie/lottie.dart';
 
 enum IngredientMode { manual, scan, ai }
 
@@ -99,7 +100,9 @@ class _FoodWastePageState extends State<FoodWastePage> {
       List<Map<String, String>> recipes = [];
 
       if (widget.mode == IngredientMode.ai) {
-        recipes = await GeminiService.generateRecipes(leftoverIngredients);
+        final fixedIngredients = await GeminiService.fixIngredients(leftoverIngredients);
+
+        recipes = await GeminiService.generateRecipes(fixedIngredients);
       } else {
         // 1. Fetch from Spoonacular
         final spoonacularRecipes =
@@ -162,26 +165,41 @@ class _FoodWastePageState extends State<FoodWastePage> {
             style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 18),
           ),
         ),
-        body: Column(
+        body: Stack(
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 24),
-                    _buildInputArea(),
-                    const SizedBox(height: 24),
-                    _buildIngredientGrid(),
-                    if (scannedImages.isNotEmpty) _buildImagePreview(),
-                  ],
+            Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(),
+                        const SizedBox(height: 24),
+                        _buildInputArea(),
+                        const SizedBox(height: 24),
+                        _buildIngredientGrid(),
+                        if (scannedImages.isNotEmpty) _buildImagePreview(),
+                      ],
+                    ),
+                  ),
+                ),
+                _buildBottomAction(),
+              ],
+            ),
+
+            if (isProcessing)
+            // Use a Container or AbsorbPointer to stop clicks on the UI behind the loading screen
+              AbsorbPointer(
+                child: Container(
+                  color: Colors.white.withOpacity(0.8), // Semi-transparent white
+                  child: Center(
+                    child: _buildFancyLoading(),
+                  ),
                 ),
               ),
-            ),
-            _buildBottomAction(),
           ],
         ),
       ),
@@ -339,14 +357,43 @@ class _FoodWastePageState extends State<FoodWastePage> {
           itemBuilder: (context, index) {
             return Padding(
               padding: const EdgeInsets.only(right: 10),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(kRadius),
-                child: Image.file(
-                  scannedImages[index],
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.cover,
-                ),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(kRadius),
+                    child: Image.file(
+                      scannedImages[index],
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+
+                  // ❌ Delete Button
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          scannedImages.removeAt(index);
+                        });
+                      },
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           },
@@ -381,6 +428,78 @@ class _FoodWastePageState extends State<FoodWastePage> {
             child: Text(
               widget.mode == IngredientMode.ai ? '✨ Generate AI Recipes' : 'Generate Recipes',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFancyLoading() {
+    return Container(
+      color: kBgColor.withOpacity(0.95),
+      width: double.infinity,
+      height: double.infinity,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // 🌟 THE MAGIC: Fancy Lottie Animation
+          // This specific URL is a cute "Chef Frying Pan" animation
+          Lottie.network(
+            'https://assets5.lottiefiles.com/packages/lf20_tll0j4bb.json',
+            height: 200,
+            repeat: true,
+          ),
+
+          const SizedBox(height: 20),
+
+          Text(
+            "Chef is thinking...",
+            style: GoogleFonts.poppins(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Rotating Cooking Facts/Tips
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: StreamBuilder<int>(
+              stream: Stream.periodic(const Duration(seconds: 3), (i) => i),
+              builder: (context, snapshot) {
+                List<String> tips = [
+                  "Did you know? Broccoli stems are edible!",
+                  "AI is searching for the best eco-friendly recipes...",
+                  "Reducing food waste saves money and the planet.",
+                  "Adding a bit of acid brightens old veggies.",
+                  "Stale bread is perfect for homemade croutons!",
+                ];
+                String currentTip = tips[(snapshot.data ?? 0) % tips.length];
+
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 500),
+                  child: Text(
+                    currentTip,
+                    key: ValueKey(currentTip),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 40),
+          const SizedBox(
+            width: 150,
+            child: LinearProgressIndicator(
+              color: kPrimaryGreen,
+              backgroundColor: Colors.white,
             ),
           ),
         ],
