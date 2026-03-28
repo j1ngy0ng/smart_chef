@@ -444,7 +444,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                                   // Check if it's a local Gallery path (not empty and not http)
                                   else if (imagePath.isNotEmpty) {
                                     return Image.file(
-                                      File(imagePath), // Make sure to import 'import 'dart:io';'
+                                      File(imagePath), 
                                       width: 50,
                                       height: 50,
                                       fit: BoxFit.cover,
