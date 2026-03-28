@@ -346,7 +346,6 @@ class SupabaseService {
         .order('created_at', ascending: false);
   }
 
-  // Inside SupabaseService.dart
   Future<void> saveMealToCloud({
     required String recipeId,
     required String title,
@@ -358,7 +357,8 @@ class SupabaseService {
     final user = currentUser;
     if (user == null) return;
 
-    await _client.from('saved_planner_meals').insert({
+    // Use .upsert() instead of .insert()
+    await _client.from('saved_planner_meals').upsert({
       'user_id': user.id,
       'recipe_id': recipeId,
       'title': title,
@@ -366,7 +366,7 @@ class SupabaseService {
       'image_url': imageUrl,
       'ingredients': ingredients,
       'steps': steps,
-    });
+    }, onConflict: 'recipe_id, user_id'); // This ensures it updates the specific meal for this user
   }
 
   // --- MEAL PLANNER CLOUD SYNC ---

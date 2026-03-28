@@ -206,6 +206,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             ),
             child: Column(
               children: [
+                // --- DRAG HANDLE ---
                 Center(
                   child: Container(
                     margin: const EdgeInsets.only(top: 12, bottom: 20),
@@ -217,6 +218,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                     ),
                   ),
                 ),
+
                 Expanded(
                   child: SingleChildScrollView(
                     controller: scrollController,
@@ -230,22 +232,17 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                           const Center(
                             child: Text(
                               "Community Favorites",
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                             ),
                           ),
                           const SizedBox(height: 20),
+
+                          // --- SEARCH BAR ---
                           TextField(
-                            onChanged: (value) =>
-                                controller.searchQuery.value = value,
+                            onChanged: (value) => controller.searchQuery.value = value,
                             decoration: InputDecoration(
                               hintText: "Search recipes...",
-                              prefixIcon: const Icon(
-                                Icons.search,
-                                color: Color(0xFF00A676),
-                              ),
+                              prefixIcon: const Icon(Icons.search, color: Color(0xFF00A676)),
                               filled: true,
                               fillColor: Colors.grey[100],
                               border: OutlineInputBorder(
@@ -255,21 +252,31 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                             ),
                           ),
                           const SizedBox(height: 20),
+
+                          // --- CONTENT SECTION ---
                           Obx(() {
+                            // 1. Handle actual Offline/Empty State
+                            if (postController.posts.isEmpty) {
+                              return _buildOfflineState(context, postController);
+                            }
+
+                            // 2. Handle Search Filtering
                             final filteredPosts = postController.posts
-                                .where(
-                                  (post) => post.title.toLowerCase().contains(
-                                    controller.searchQuery.value.toLowerCase(),
-                                  ),
-                                )
+                                .where((post) => post.title.toLowerCase().contains(
+                              controller.searchQuery.value.toLowerCase(),
+                            ))
                                 .toList();
 
                             if (filteredPosts.isEmpty) {
                               return const Center(
-                                child: Text("No recipes found"),
+                                child: Padding(
+                                  padding: EdgeInsets.all(40.0),
+                                  child: Text("No recipes match your search"),
+                                ),
                               );
                             }
 
+                            // 3. Regular List View
                             return ListView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
@@ -284,9 +291,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                                   decoration: BoxDecoration(
                                     color: Colors.grey[50],
                                     borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(
-                                      color: Colors.grey.shade200,
-                                    ),
+                                    border: Border.all(color: Colors.grey.shade200),
                                   ),
                                   child: Row(
                                     children: [
@@ -294,72 +299,36 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                                         borderRadius: BorderRadius.circular(10),
                                         child: Image.network(
                                           post.imageUrl ?? "",
-                                          width: 60,
-                                          height: 60,
-                                          fit: BoxFit.cover,
+                                          width: 60, height: 60, fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Container(
+                                            width: 60, height: 60, color: Colors.grey[200],
+                                            child: const Icon(Icons.restaurant, size: 20),
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              post.title,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            Obx(
-                                              () => DropdownButton<String>(
-                                                value: selectedType.value,
-                                                isDense: true,
-                                                underline: const SizedBox(),
-                                                icon: const Icon(
-                                                  Icons.arrow_drop_down,
-                                                  color: Color(0xFF00A676),
-                                                ),
-                                                items:
-                                                    [
-                                                          'Breakfast',
-                                                          'Lunch',
-                                                          'Dinner',
-                                                        ]
-                                                        .map(
-                                                          (
-                                                            type,
-                                                          ) => DropdownMenuItem(
-                                                            value: type,
-                                                            child: Text(
-                                                              type,
-                                                              style:
-                                                                  const TextStyle(
-                                                                    fontSize:
-                                                                        13,
-                                                                  ),
-                                                            ),
-                                                          ),
-                                                        )
-                                                        .toList(),
-                                                onChanged: (val) =>
-                                                    selectedType.value = val!,
-                                              ),
-                                            ),
+                                            Text(post.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                            Obx(() => DropdownButton<String>(
+                                              value: selectedType.value,
+                                              isDense: true,
+                                              underline: const SizedBox(),
+                                              icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF00A676)),
+                                              items: ['Breakfast', 'Lunch', 'Dinner'].map((t) =>
+                                                  DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 13)))
+                                              ).toList(),
+                                              onChanged: (val) => selectedType.value = val!,
+                                            )),
                                           ],
                                         ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(
-                                          Icons.add_circle,
-                                          color: Color(0xFF00A676),
-                                          size: 32,
-                                        ),
+                                        icon: const Icon(Icons.add_circle, color: Color(0xFF00A676), size: 32),
                                         onPressed: () {
-                                          controller.addFromPost(
-                                            post,
-                                            selectedType.value,
-                                          );
+                                          controller.addFromPost(post, selectedType.value);
                                           Get.back();
                                         },
                                       ),
@@ -378,6 +347,42 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             ),
           );
         },
+      ),
+    );
+  }
+
+// --- OFFLINE STATE WIDGET ---
+  Widget _buildOfflineState(BuildContext context, PostController postController) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60),
+        child: Column(
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 60, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            const Text(
+              "Offline Mode",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "We couldn't load community recipes.\nPlease check your connection.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => postController.fetchPosts(), // Replace with your fetch method
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text("RETRY"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00A676),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -421,10 +426,41 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                             // 1. IMAGE
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                meal['image_url'],
-                                width: 50, height: 50, fit: BoxFit.cover,
-                                errorBuilder: (c, e, s) => Container(width: 50, height: 50, color: Colors.grey[200], child: const Icon(Icons.broken_image)),
+                              child: Builder(
+                                builder: (context) {
+                                  final String imagePath = meal['image_url'] ?? "";
+
+                                  // Check if it's a web URL
+                                  if (imagePath.startsWith('http')) {
+                                    return Image.network(
+                                      imagePath,
+                                      key: ValueKey(imagePath),
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (c, e, s) => const Icon(Icons.broken_image),
+                                    );
+                                  }
+                                  // Check if it's a local Gallery path (not empty and not http)
+                                  else if (imagePath.isNotEmpty) {
+                                    return Image.file(
+                                      File(imagePath), // Make sure to import 'import 'dart:io';'
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (c, e, s) => const Icon(Icons.image_not_supported),
+                                    );
+                                  }
+                                  // Fallback for no image
+                                  else {
+                                    return Container(
+                                      width: 50,
+                                      height: 50,
+                                      color: Colors.grey[200],
+                                      child: const Icon(Icons.restaurant, color: Colors.grey),
+                                    );
+                                  }
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
