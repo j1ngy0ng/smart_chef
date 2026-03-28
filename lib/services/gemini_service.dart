@@ -294,14 +294,21 @@ Rules:
             }
           ],
           'tools': [
-            {'google_search': {}}  // lets Gemini look up real nutrition data
           ],
         }),
       );
 
       print('=== GEMINI SEARCH STATUS: ${response.statusCode} ===');
 
-      if (response.statusCode != 200) return null;
+      if (response.statusCode == 429) {
+        return {'error': 'rate_limit'};
+      }
+      if (response.statusCode == 400) {
+        return {'error': 'quota_exceeded'};
+      }
+      if (response.statusCode != 200) {
+        return {'error': 'api_error', 'code': response.statusCode};
+      }
 
       final body = jsonDecode(response.body);
       final text = (body['candidates']?[0]?['content']?['parts']?[0]?['text'] as String?) ?? '';

@@ -12,9 +12,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 typedef _C = C;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SCREEN
-// ─────────────────────────────────────────────────────────────────────────────
 class AddMealScreen extends StatefulWidget {
   /// Pass an existing log to enter Edit mode
   final NutritionLog? editLog;

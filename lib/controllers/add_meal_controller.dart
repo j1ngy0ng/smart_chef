@@ -75,7 +75,9 @@ class AddMealController extends GetxController {
   Future<void> triggerSearch() async {
     final q = searchController.text.trim();
     if (q.isEmpty) return;
-    searchQuery.value = q; // ← set here, not on every keystroke
+    searchQuery.value = q;
+    // Small delay ensures keyboard submit has finished
+    await Future.delayed(const Duration(milliseconds: 100));
     await _runSearch();
   }
 
@@ -132,11 +134,17 @@ class AddMealController extends GetxController {
   }
 
   Future<void> _runSearch() async {
-    final q = searchQuery.value.trim();
+    // Use controller text as backup in case searchQuery wasn't set yet
+    final q = searchQuery.value.trim().isNotEmpty
+        ? searchQuery.value.trim()
+        : searchController.text.trim();
     if (q.isEmpty) { searchResults.clear(); return; }
 
     isSearching.value = true;
+    searchResults.clear();
+
     try {
+      // 1. Try Supabase first
       final data = await _client
           .from('food_items')
           .select()
@@ -151,8 +159,41 @@ class AddMealController extends GetxController {
         return;
       }
 
+      // 2. Try Gemini AI
       final geminiResult = await GeminiService.searchFoodNutrition(q);
-      if (geminiResult == null) { searchResults.value = []; return; }
+
+      if (geminiResult == null) {
+        searchResults.value = [];
+        return;
+      }
+
+      if (geminiResult['error'] == 'rate_limit') {
+        Get.snackbar('⚠️ Too Many Requests',
+            'Please wait a moment and try again.',
+            snackPosition: SnackPosition.TOP,
+            backgroundColor: Colors.orange.shade400,
+            colorText: Colors.white);
+        searchResults.value = [];
+        return;
+      }
+
+      if (geminiResult['error'] == 'quota_exceeded') {
+        Get.snackbar('⚠️ AI Credit Exhausted',
+            'Daily AI search limit reached. Try again tomorrow.',
+            snackPosition: SnackPosition.TOP,
+            backgroundColor: Colors.red.shade400,
+            colorText: Colors.white);
+        searchResults.value = [];
+        return;
+      }
+
+      if (geminiResult['error'] != null) {
+        Get.snackbar('❌ Search Failed',
+            'Could not find nutrition data. Try a different term.',
+            snackPosition: SnackPosition.TOP);
+        searchResults.value = [];
+        return;
+      }
 
       final food = FoodItem(
         id: '',
