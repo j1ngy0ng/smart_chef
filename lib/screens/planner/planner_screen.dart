@@ -300,7 +300,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                                         child: Image.network(
                                           post.imageUrl ?? "",
                                           width: 60, height: 60, fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Container(
+                                          errorBuilder: (_, _, _) => Container(
                                             width: 60, height: 60, color: Colors.grey[200],
                                             child: const Icon(Icons.restaurant, size: 20),
                                           ),
@@ -444,7 +444,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                                   // Check if it's a local Gallery path (not empty and not http)
                                   else if (imagePath.isNotEmpty) {
                                     return Image.file(
-                                      File(imagePath), 
+                                      File(imagePath),
                                       width: 50,
                                       height: 50,
                                       fit: BoxFit.cover,
