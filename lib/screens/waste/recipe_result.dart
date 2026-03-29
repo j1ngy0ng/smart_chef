@@ -4,6 +4,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../../services/gemini_service.dart';
 import '../../services/local_db_service.dart';
 import '../../services/supabase_service.dart';
+import 'package:uuid/uuid.dart';
 
 const Color kPrimaryGreen = Color(0xFF4CAF50);
 const Color kAccentOrange = Color(0xFFFF9800);
@@ -293,11 +294,11 @@ class _AnimatedHeartState extends State<AnimatedHeart> with SingleTickerProvider
     bool fav = false;
 
     try {
-      // ⭐ Check Supabase first
-      fav = await supabase.isFavorite(widget.recipe["title"]!);
+      //Check Supabase first
+      fav = await supabase.isFavorite(widget.recipe["id"] ?? widget.recipe["title"]!);
     } catch (e) {
-      // If internet fails → check SQLite
-      fav = await db.isFavorite(widget.recipe["title"]!);
+      // If internet fails, check SQLite
+      fav = await db.isFavorite(widget.recipe["id"] ?? widget.recipe["title"]!);
     }
 
     setState(() {
@@ -337,21 +338,26 @@ class _AnimatedHeartState extends State<AnimatedHeart> with SingleTickerProvider
 
       try {
 
-        // ⭐ Save to Supabase first
+        //Save to Supabase first
+        final recipeId = widget.recipe["id"] ?? const Uuid().v4();
+        widget.recipe["id"] = recipeId;
+
         await supabase.addFavorite(
-          recipeId: widget.recipe["title"] ?? "",
+          recipeId: recipeId,
           title: widget.recipe["title"] ?? "",
           image: widget.recipe["image"] ?? "",
           kcal: widget.recipe["kcal"] ?? "",
           duration: widget.recipe["duration"] ?? "",
+          ingredients: widget.recipe["ingredients"] ?? "",
+          steps: widget.recipe["steps"] ?? "",
         );
 
-        // ⭐ Also cache locally
+        //Also cache locally
         await db.saveFavorite(widget.recipe);
 
       } catch (e) {
 
-        // If Supabase fails → fallback to local
+        // If Supabase fails, fallback to local
         await db.saveFavorite(widget.recipe);
 
       }
@@ -360,13 +366,12 @@ class _AnimatedHeartState extends State<AnimatedHeart> with SingleTickerProvider
 
       try {
 
-        await supabase.removeFavorite(widget.recipe["title"] ?? "");
-
-        await db.removeFavorite(widget.recipe["title"]!);
+        await supabase.removeFavorite(widget.recipe["id"]!);
+        await db.removeFavorite(widget.recipe["id"]!);
 
       } catch (e) {
 
-        await db.removeFavorite(widget.recipe["title"]!);
+        await db.removeFavorite(widget.recipe["id"]!);
 
       }
     }

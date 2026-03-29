@@ -307,6 +307,8 @@ class SupabaseService {
     required String image,
     required String kcal,
     required String duration,
+    required String ingredients,
+    required String steps,
   }) async {
 
     final user = currentUser;
@@ -319,6 +321,8 @@ class SupabaseService {
       'image': image,
       'kcal': kcal,
       'duration': duration,
+      'ingredients': ingredients,
+      'steps': steps,
     });
   }
 

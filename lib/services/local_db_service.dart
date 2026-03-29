@@ -87,6 +87,8 @@ class LocalDbService {
             image TEXT,
             kcal TEXT,
             duration TEXT
+            ingredients TEXT,
+            steps TEXT,
           )
           ''');
 

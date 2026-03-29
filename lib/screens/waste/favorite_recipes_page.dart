@@ -17,17 +17,27 @@ class FavoriteRecipesPage extends StatefulWidget {
 class _FavoriteRecipesPageState extends State<FavoriteRecipesPage> {
   final SupabaseService supabaseService = SupabaseService();
 
-  Future<bool?> _showDeleteConfirmation(BuildContext context, String title) async {
+  Future<bool?> _showDeleteConfirmation(
+      BuildContext context,
+      String recipeId,
+      String title,
+      ) async {
     return await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text("Remove Favorite?", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        title: Text(
+          "Remove Favorite?",
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
         content: Text("Delete '$title' from your collection?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text("Cancel", style: TextStyle(color: Colors.grey.shade600)),
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -36,12 +46,17 @@ class _FavoriteRecipesPageState extends State<FavoriteRecipesPage> {
               elevation: 0,
             ),
             onPressed: () async {
-              await supabaseService.removeFavorite(title);
+              await supabaseService.removeFavorite(recipeId);
+
               final localDb = LocalDbService();
-              await localDb.removeFavorite(title);
+              await localDb.removeFavorite(recipeId);
+
               if (context.mounted) Navigator.pop(context, true);
             },
-            child: const Text("Remove", style: TextStyle(color: Colors.white)),
+            child: const Text(
+              "Remove",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -149,7 +164,11 @@ class _FavoriteRecipesPageState extends State<FavoriteRecipesPage> {
                     right: 8,
                     child: GestureDetector(
                       onTap: () async {
-                        final confirmed = await _showDeleteConfirmation(context, title);
+                        final confirmed = await _showDeleteConfirmation(
+                          context,
+                          recipe['recipe_id'],
+                          title,
+                        );
                         if (confirmed == true) setState(() {});
                       },
                       child: Container(
@@ -184,9 +203,12 @@ class _FavoriteRecipesPageState extends State<FavoriteRecipesPage> {
                       children: [
                         const Icon(Icons.access_time, size: 12, color: Colors.grey),
                         const SizedBox(width: 4),
-                        Text(
-                          recipe["duration"] ?? "--",
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        Flexible(
+                          child: Text(
+                            recipe["duration"] ?? "--",
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
                         ),
                         const Spacer(),
                         Container(

@@ -9,7 +9,7 @@ class GeminiService {
 
   static const String _nutritionApiKey = 'AIzaSyC95VmA7tfXrMtqgvomfSYPFZD9jOUrxkI';
 
-  // 🔹 Detect ingredients from image (Kept exactly as your working version)
+  //Detect ingredients from image
   static Future<List<String>> detectIngredients(File image) async {
     final bytes = await image.readAsBytes();
     final base64Image = base64Encode(bytes);
@@ -82,7 +82,7 @@ tomato, egg, onion
     return ingredients;
   }
 
-  // 🔹 AI Fix Ingredients (production-style smart correction)
+  //AI Fix Ingredients
   static Future<List<String>> fixIngredients(List<String> ingredients) async {
     final url = Uri.parse(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey",
@@ -134,7 +134,7 @@ Return ONLY a comma separated list in lowercase.
       }
     }
 
-    // ⭐ SAFETY CHECK (this is the part you asked about)
+    // If returns empty list,still have something to work with.
     if (cleaned.isEmpty) {
       return ["egg", "rice"]; // fallback ingredients
     }
@@ -142,11 +142,11 @@ Return ONLY a comma separated list in lowercase.
     return cleaned;
   }
 
-  // 🔹 Generate Recipes (Updated specifically for kcal/duration)
+  // Generate Recipes
   static Future<List<Map<String, String>>> generateRecipes(List<String> ingredients, {int targetCount = 6}) async {
     final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey");
 
-    // 🟢 Step 1: Specific prompt for kcal and duration
+    //kcal and duration
     final prompt = """
         You are a creative AI chef. Using: ${ingredients.join(", ")}, invent $targetCount unique recipes. 
         For each recipe, provide:
@@ -206,7 +206,7 @@ Return ONLY a comma separated list in lowercase.
         }
       }
 
-      // 🟢 Step 2: Recursive call (kept your logic)
+      //Recursive call if not enough recipes with images
       if (recipes.length < targetCount) {
         final more = await generateRecipes(ingredients, targetCount: targetCount - recipes.length);
         recipes.addAll(more);
@@ -219,7 +219,7 @@ Return ONLY a comma separated list in lowercase.
     }
   }
 
-  // 🔹 Fetch Image (Kept exactly as your working version)
+  //Fetch Image
   static Future<String> fetchRecipeImagePixabay(String query) async {
     try {
       final url = Uri.parse(
