@@ -371,6 +371,8 @@ class PostController extends GetxController {
   // Shake to Shuffle State
   StreamSubscription? _shakeSubscription;
   DateTime _lastShake = DateTime.now();
+  // prevent shakes on other screens
+  bool canShake = true;
 
   // Shake Logic
   void startShakeListener() {
@@ -392,6 +394,12 @@ class PostController extends GetxController {
   }
 
   void _showRandomRecipe() {
+    //If not on the main feed, ignore shake
+    if (!canShake) return;
+
+    // If a dialog is already open, don't open another one
+    if (Get.isDialogOpen == true) return;
+
     // Only show if actually have posts to shuffle
     if (posts.isEmpty) return;
 
@@ -412,10 +420,13 @@ class PostController extends GetxController {
       confirmTextColor: Colors.white,
       buttonColor: const Color(0xFF00A676),
       onConfirm: () {
-        Get.back(); // Close dialog
-
-        // the jump to the recipe
-        Get.to(() => PostDetailScreen(post: randomPost));
+        Get.back();
+        // Turn off shake while reading the recipe
+        canShake = false;
+        Get.to(() => PostDetailScreen(post: randomPost))?.then((value) {
+          // Turn it back on when return to the feed
+          canShake = true;
+        });
       },
       textCancel: "Try Again",
       cancelTextColor: Colors.grey,

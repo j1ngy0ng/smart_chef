@@ -125,7 +125,15 @@ class BlogFeedScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF00A676),
-        onPressed: () => Get.to(() => const CreatePostScreen())?.then((_) => postController.fetchPosts()),
+        onPressed: () {
+          // Turn Off sensor while writing a new post
+          postController.canShake = false;
+          Get.to(() => const CreatePostScreen())?.then((_) {
+            // Fetch new posts AND turn sensor back ON
+            postController.fetchPosts();
+            postController.canShake = true;
+          });
+        },
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -133,7 +141,14 @@ class BlogFeedScreen extends StatelessWidget {
 
   Widget _buildRedNoteCard(BuildContext context, PostModel post) {
     return GestureDetector(
-      onTap: () => Get.to(() => PostDetailScreen(post: post)),
+      onTap: () {
+        // Turn Off the sensor
+        postController.canShake = false;
+        Get.to(() => PostDetailScreen(post: post))?.then((_) {
+          // Turn the sensor back ON when the user presses the 'back' button
+          postController.canShake = true;
+        });
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
