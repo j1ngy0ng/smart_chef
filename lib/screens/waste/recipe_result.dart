@@ -6,7 +6,7 @@ import '../../services/local_db_service.dart';
 import '../../services/supabase_service.dart';
 import 'package:uuid/uuid.dart';
 
-const Color kPrimaryGreen = Color(0xFF4CAF50);
+const Color kPrimaryGreen = Color(0xFF00A676);
 const Color kAccentOrange = Color(0xFFFF9800);
 const Color kBgColor = Color(0xFFF9FBF9);
 const double kRadius = 16.0;
@@ -125,7 +125,7 @@ class _RecipeResultPageState extends State<RecipeResultPage> {
                   right: 12,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3), // Dark circle behind the heart
+                      color: Colors.black.withOpacity(0.3),
                       shape: BoxShape.circle,
                     ),
                     child: AnimatedHeart(recipe: recipe),
@@ -147,11 +147,23 @@ class _RecipeResultPageState extends State<RecipeResultPage> {
                     children: [
                       Icon(Icons.timer_outlined, size: 16, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
-                      Text(recipe["duration"] ?? "--", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                      Flexible(
+                        child: Text(
+                          recipe["duration"] ?? "--",
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                        ),
+                      ),
                       const SizedBox(width: 16),
                       Icon(Icons.local_fire_department_outlined, size: 16, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text(recipe["kcal"] ?? "--", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                      Flexible(
+                        child: Text(
+                          recipe["kcal"] ?? "--",
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                        ),
+                      ),
                     ],
                   ),
 
@@ -219,13 +231,21 @@ class RecipeDetailPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 🔹 ADDED: Info Chips Row
-                  Row(
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       _buildInfoChip(Icons.timer, recipe["duration"] ?? "20m", Colors.blueGrey),
-                      const SizedBox(width: 10),
                       _buildInfoChip(Icons.local_fire_department, recipe["kcal"] ?? "---", Colors.orange),
-                      const Spacer(),
-                      const Text("Eco-Friendly", style: TextStyle(color: kPrimaryGreen, fontWeight: FontWeight.bold, fontSize: 12)),
+                      const Text(
+                        "Eco-Friendly",
+                        style: TextStyle(
+                          color: kPrimaryGreen,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -249,18 +269,32 @@ class RecipeDetailPage extends StatelessWidget {
 
   // 🔹 Helper for the Info Chips
   Widget _buildInfoChip(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
-        ],
+    return Tooltip(
+      message: label, // Full text shows on hover or long press
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -18,19 +18,19 @@ class Recipe {
   });
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
-    // 1. Parse ingredients
+    //Parse ingredients
     List<String> ingredientsList = (json['extendedIngredients'] as List<dynamic>?)
         ?.map((e) => e['original'].toString())
         .toList() ?? [];
 
-    // 2. Parse steps
+    //Parse steps
     List<String> stepsList = [];
     if (json['analyzedInstructions'] != null && (json['analyzedInstructions'] as List).isNotEmpty) {
       final instructionList = json['analyzedInstructions'][0]['steps'] as List;
       stepsList = instructionList.map((e) => e['step'].toString()).toList();
     }
 
-    // 3. Extract Calories (Kcal) from Nutrition list
+    //Extract Calories (Kcal) from Nutrition list
     String foundKcal = "---";
     final nutrients = json['nutrition']?['nutrients'];
     if (nutrients != null) {

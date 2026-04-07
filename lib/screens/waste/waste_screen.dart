@@ -10,7 +10,7 @@ import 'package:lottie/lottie.dart';
 enum IngredientMode { manual, scan, ai }
 
 // --- Design System Constants ---
-const Color kPrimaryGreen = Color(0xFF4CAF50);
+const Color kPrimaryGreen = Color(0xFF00A676);
 const Color kAccentOrange = Color(0xFFFF9800);
 const Color kBgColor = Color(0xFFF9FBF9);
 const double kRadius = 16.0;

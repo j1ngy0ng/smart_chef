@@ -4,7 +4,7 @@ import 'waste_screen.dart';
 import '../waste/favorite_recipes_page.dart';
 
 // --- Design System Constants ---
-const Color kPrimaryGreen = Color(0xFF4CAF50);
+const Color kPrimaryGreen = Color(0xFF00A676);
 const Color kAccentOrange = Color(0xFFFF9800);
 const Color kBgColor = Color(0xFFF9FBF9);
 
@@ -18,8 +18,7 @@ class IngredientChoicePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // 🔹 Removed the 'Smart Chef' title
-        automaticallyImplyLeading: false, // Prevents an accidental back button
+        automaticallyImplyLeading: false, // Prevents accidental back button
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 24.0, top: 12.0),
@@ -71,11 +70,11 @@ class IngredientChoicePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 10), // Pushed up since title is gone
+              const SizedBox(height: 10),
               Text(
                 "Reduce Waste,",
                 style: GoogleFonts.poppins(
-                  fontSize: 32, // Slightly larger for impact
+                  fontSize: 32,
                   fontWeight: FontWeight.w800,
                   height: 1.1,
                 ),
@@ -146,7 +145,7 @@ class IngredientChoicePage extends StatelessWidget {
         required IngredientMode mode,
       }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0), // Increased spacing
+      padding: const EdgeInsets.only(bottom: 20.0),
       child: InkWell(
         onTap: () {
           Navigator.push(

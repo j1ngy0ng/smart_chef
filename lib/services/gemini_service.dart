@@ -225,17 +225,31 @@ Return ONLY a comma separated list in lowercase.
       final url = Uri.parse(
         "https://pixabay.com/api/?key=$pixabayApiKey&q=${Uri.encodeComponent(query)}&image_type=photo&per_page=3",
       );
+
       final response = await http.get(url);
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final hits = data["hits"] as List<dynamic>?;
-        return (hits != null && hits.isNotEmpty) ? hits[0]["webformatURL"] : "";
+
+        if (hits != null && hits.isNotEmpty) {
+          final image = hits[0]["previewURL"] ?? "";
+
+          // ensure CDN format
+          if (image.contains("cdn.pixabay.com")) {
+            return image;
+          }
+
+          return "";
+        }
       }
+
       return "";
     } catch (e) {
       return "";
     }
   }
+
   static Future<Map<String, dynamic>?> analyzeFoodImage(Uint8List imageBytes) async {
     try {
       final base64Image = base64Encode(imageBytes);

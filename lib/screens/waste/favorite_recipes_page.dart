@@ -4,7 +4,7 @@ import '../../services/local_db_service.dart';
 import 'recipe_result.dart';
 import '../../services/supabase_service.dart';
 
-const Color kPrimaryGreen = Color(0xFF4CAF50);
+const Color kPrimaryGreen = Color(0xFF00A676);
 const Color kBgColor = Color(0xFFF9FBF9);
 
 class FavoriteRecipesPage extends StatefulWidget {
@@ -203,14 +203,17 @@ class _FavoriteRecipesPageState extends State<FavoriteRecipesPage> {
                       children: [
                         const Icon(Icons.access_time, size: 12, color: Colors.grey),
                         const SizedBox(width: 4),
-                        Flexible(
+
+                        Expanded(
                           child: Text(
                             recipe["duration"] ?? "--",
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 11, color: Colors.grey),
                           ),
                         ),
-                        const Spacer(),
+
+                        const SizedBox(width: 6),
+
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -221,11 +224,10 @@ class _FavoriteRecipesPageState extends State<FavoriteRecipesPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                // Extracting just the number (e.g., "350")
-                                recipe["kcal"]?.split(' ')[0] ?? "--",
+                                (recipe["kcal"] ?? "--").split(' ').first,
                                 style: const TextStyle(
                                   color: kPrimaryGreen,
-                                  fontWeight: FontWeight.w800, // Extra bold for the number
+                                  fontWeight: FontWeight.w800,
                                   fontSize: 11,
                                 ),
                               ),
@@ -235,7 +237,7 @@ class _FavoriteRecipesPageState extends State<FavoriteRecipesPage> {
                                 style: TextStyle(
                                   color: kPrimaryGreen,
                                   fontWeight: FontWeight.w500,
-                                  fontSize: 9, // Smaller unit text for a "Pro" look
+                                  fontSize: 9,
                                 ),
                               ),
                             ],
