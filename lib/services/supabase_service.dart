@@ -362,7 +362,6 @@ class SupabaseService {
     final user = currentUser;
     if (user == null) return;
 
-    // Use .upsert() instead of .insert()
     await _client.from('saved_planner_meals').upsert({
       'user_id': user.id,
       'recipe_id': recipeId,

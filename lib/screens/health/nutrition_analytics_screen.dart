@@ -928,9 +928,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // DATA MODEL
-// ─────────────────────────────────────────────────────────────────────────────
 class _DayData {
   final DateTime date;
   double calories = 0;
@@ -941,9 +939,7 @@ class _DayData {
   _DayData({required this.date});
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // LINE CHART PAINTER
-// ─────────────────────────────────────────────────────────────────────────────
 class _LineChartPainter extends CustomPainter {
   final List<_DayData> data;
   final double goal;
@@ -1072,9 +1068,7 @@ class _LineChartPainter extends CustomPainter {
       old.progress != progress || old.data != data;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // BAR CHART PAINTER
-// ─────────────────────────────────────────────────────────────────────────────
 class _BarChartPainter extends CustomPainter {
   final List<_DayData> data;
   final double goal;
@@ -1191,9 +1185,7 @@ class _BarChartPainter extends CustomPainter {
   bool shouldRepaint(_BarChartPainter old) => old.progress != progress;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // PIE CHART PAINTER
-// ─────────────────────────────────────────────────────────────────────────────
 class _PieChartPainter extends CustomPainter {
   final double protein, carbs, fat, progress;
 

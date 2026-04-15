@@ -32,8 +32,8 @@ class _DietaryPreferencesScreenState extends State<DietaryPreferencesScreen>
 
   // Macro ratios (0.0 – 1.0), always sum to 1
   double _proteinRatio = 0.30; // 30%
-  double _carbsRatio = 0.50;   // 50%
-  double _fatRatio = 0.20;     // 20%
+  double _carbsRatio = 0.50;
+  double _fatRatio = 0.20;
 
   final TextEditingController _calCtrl = TextEditingController();
   Worker? _autoSaveWorker;

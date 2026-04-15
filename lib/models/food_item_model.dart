@@ -72,7 +72,6 @@ class FoodItem {
   ];
 }
 
-/// A cart item = FoodItem + chosen serving size + optional manual macro overrides.
 class MealCartItem {
   final String cartId;
   final FoodItem food;
@@ -99,7 +98,6 @@ class MealCartItem {
         isEditing = initialEditing.obs,
         foodName = food.name.obs;
 
-  // ── Macro getters: use override if set, else calculate from serving ─────────
   double get calories {
     final p = _overrideProtein.value ?? food.proteinPer100g * servingGrams.value / 100;
     final c = _overrideCarbs.value   ?? food.carbsPer100g   * servingGrams.value / 100;

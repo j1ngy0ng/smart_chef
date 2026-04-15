@@ -14,9 +14,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 typedef _C = C;
 
-// ─────────────────────────────────────────────────────────────────────────────
 // SCREEN
-// ─────────────────────────────────────────────────────────────────────────────
 class NutritionDashboardScreen extends StatefulWidget {
   const NutritionDashboardScreen({super.key});
 
@@ -39,7 +37,6 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
   void initState() {
     super.initState();
 
-    // Get or create controller — safe to call even if already registered
     _ctrl = Get.put(NutritionController());
 
     _ringAnim = AnimationController(
@@ -941,9 +938,7 @@ class _NutritionDashboardScreenState extends State<NutritionDashboardScreen>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // CUSTOM PAINTER — Calorie Ring
-// ─────────────────────────────────────────────────────────────────────────────
 class _RingPainter extends CustomPainter {
   final double progress;
   _RingPainter({required this.progress});

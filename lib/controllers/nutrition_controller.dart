@@ -97,7 +97,6 @@ class NutritionController extends GetxController {
     } finally {
       isLoading.value = false;
 
-      // Show snackbar on EVERY load when offline (init + manual refresh)
       if (isOffline) {
         Get.snackbar(
           'Offline Mode',
@@ -138,7 +137,7 @@ class NutritionController extends GetxController {
     _stepSaveTimer?.cancel();
     _stepSaveTimer = Timer(const Duration(seconds: 5), () async {
 
-      // Always save to SQLite — works online AND offline
+      // Save to SQLite — works online AND offline
       await _localDb.cacheHealthData(DailyHealthData(
         userId: userId,
         steps: steps,
@@ -274,7 +273,7 @@ class NutritionController extends GetxController {
       await _localDb.cacheNutritionLogs(logs);
     } catch (e) {
       final today = DateTime.now();
-      final cached = await _localDb.getNutritionLogsForDate(userId, today); // ← ADD
+      final cached = await _localDb.getNutritionLogsForDate(userId, today);
       if (cached.isNotEmpty) {
         todayLogs.value = cached;
         _recalcTotals(cached);
@@ -370,7 +369,6 @@ class NutritionController extends GetxController {
         healthData.value = cached ?? DailyHealthData.empty(userId);
         waterGlasses.value = healthData.value!.waterIntake;
       }
-      // Pedometer will override steps/calories live via _startPedometer()
     } catch (e) {
       final today = DateTime.now();
       final cached = await _localDb.getCachedHealthData(userId, today);
@@ -388,7 +386,7 @@ class NutritionController extends GetxController {
         userId: userId,
         steps: healthData.value!.steps,
         caloriesBurned: healthData.value!.caloriesBurned,
-        waterIntake: count,                    // ← updated count
+        waterIntake: count,                    // updated count
         source: healthData.value!.source,
         recordedAt: healthData.value!.recordedAt,
       );
@@ -431,7 +429,7 @@ class NutritionController extends GetxController {
     }
   }
 
-  // ─── Error handler (same pattern as other controllers) ───────────────────────
+  // ─── Error handler ───────────────────────
   void _handleError(String context, dynamic e) {
     print('NutritionController.$context error: $e');
     Get.snackbar(

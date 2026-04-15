@@ -10,7 +10,7 @@ class PedometerService {
 
   // Current values
   static int _todaySteps = 0;
-  static int _stepCountAtMidnight = 0; // baseline to calculate today's steps
+  static int _stepCountAtMidnight = 0;
   static String _status = 'unknown'; // 'walking' | 'stopped' | 'unknown'
 
   // Callbacks — set these to update your UI
@@ -119,7 +119,6 @@ class PedometerService {
   // ── Debug logger ───────────────────────────────────────────────────────────
   static void debugLog(String msg) {
     assert(() {
-      // ignore: avoid_print
       print('=== PEDOMETER: $msg ===');
       return true;
     }());

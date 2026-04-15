@@ -139,7 +139,7 @@ class _AddMealScreenState extends State<AddMealScreen>
               ],
             ),
           ),
-          // Barcode scan button
+          // Food scanner button
           Obx(() => GestureDetector(
             onTap: _ctrl.isScanning.value ? null : () {
               if (_isOffline) {

@@ -25,12 +25,10 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
   String? _editingLogId;
   final Map<String, TextEditingController> _nameControllers = {};
   final Map<String, TextEditingController> _servingControllers = {};
-  // ── NEW: macro override controllers ────────────────────────────────────────
   final Map<String, TextEditingController> _proteinControllers = {};
   final Map<String, TextEditingController> _carbsControllers = {};
   final Map<String, TextEditingController> _fatControllers = {};
   final Map<String, bool> _macroOverrideFlags = {};
-  // ───────────────────────────────────────────────────────────────────────────
 
   final SupabaseClient _client = Supabase.instance.client;
   late AnimationController _fadeAnim;
@@ -128,7 +126,6 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
     }
   }
 
-  // ── UPDATED: _updateLog now accepts optional macro overrides ───────────────
   Future<void> _updateLog(
       NutritionLog log,
       String newName,
@@ -761,7 +758,6 @@ class _MealHistoryScreenState extends State<MealHistoryScreen>
     );
   }
 
-  // ── FULLY REWRITTEN edit panel with macro override support ─────────────────
   Widget _buildEditPanel(NutritionLog log) {
     return StatefulBuilder(
       builder: (context, setLocal) {

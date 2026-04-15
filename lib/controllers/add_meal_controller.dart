@@ -83,7 +83,6 @@ class AddMealController extends GetxController {
 
   void onSearchChanged(String query) {
     // Only clear results if user clears the field
-    // Don't update searchQuery — that's only updated when Search is tapped
     if (query.isEmpty) {
       searchQuery.value = '';
       searchResults.clear();

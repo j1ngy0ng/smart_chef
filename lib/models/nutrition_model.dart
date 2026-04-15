@@ -137,7 +137,7 @@ class DailyHealthData {
   final double caloriesBurned;
   final int waterIntake;
   final int? heartRate;
-  final String source; // 'manual' | 'google_fit' | 'apple_health'
+  final String source; // 'manual' | 'pedometer'
   final DateTime recordedAt;
 
   DailyHealthData({

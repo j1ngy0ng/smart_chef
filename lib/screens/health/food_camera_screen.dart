@@ -1,7 +1,3 @@
-// screens/health/food_camera_screen.dart
-// AI-powered food camera screen.
-// Takes a photo, sends to Gemini Vision, returns food data Map via Get.back(result: foodData).
-
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
