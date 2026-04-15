@@ -104,11 +104,10 @@ class _FoodWastePageState extends State<FoodWastePage> {
 
         recipes = await GeminiService.generateRecipes(fixedIngredients);
       } else {
-        // 1. Fetch from Spoonacular
+        // Fetch from Spoonacular
         final spoonacularRecipes =
         await RecipeService.fetchRecipesByIngredients(leftoverIngredients);
 
-        // 2. 🟢 FIX: Map ALL fields, including kcal and duration
         recipes = spoonacularRecipes.map((r) => {
           "title": r.title,
           "ingredients": r.ingredients.join(", "),
@@ -191,7 +190,6 @@ class _FoodWastePageState extends State<FoodWastePage> {
             ),
 
             if (isProcessing)
-            // Use a Container or AbsorbPointer to stop clicks on the UI behind the loading screen
               AbsorbPointer(
                 child: Container(
                   color: Colors.white.withOpacity(0.8), // Semi-transparent white
@@ -444,7 +442,6 @@ class _FoodWastePageState extends State<FoodWastePage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // 🌟 THE MAGIC: Fancy Lottie Animation
-          // This specific URL is a cute "Chef Frying Pan" animation
           Lottie.network(
             'https://assets5.lottiefiles.com/packages/lf20_tll0j4bb.json',
             height: 200,

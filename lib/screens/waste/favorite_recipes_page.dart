@@ -93,7 +93,7 @@ class _FavoriteRecipesPageState extends State<FavoriteRecipesPage> {
 
           final favorites = snapshot.data!;
 
-          // 🔹 Changed to GridView for a more modern "Gallery" look
+
           return GridView.builder(
             padding: const EdgeInsets.all(20),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

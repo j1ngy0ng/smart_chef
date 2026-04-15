@@ -267,7 +267,7 @@ class RecipeDetailPage extends StatelessWidget {
     );
   }
 
-  // 🔹 Helper for the Info Chips
+  //Helper for the Info Chips
   Widget _buildInfoChip(IconData icon, String label, Color color) {
     return Tooltip(
       message: label, // Full text shows on hover or long press
