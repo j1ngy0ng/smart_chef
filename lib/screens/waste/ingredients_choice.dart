@@ -64,75 +64,140 @@ class IngredientChoicePage extends StatelessWidget {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-              Text(
-                "Reduce Waste,",
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                "Cook Deliciously.",
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  color: kPrimaryGreen,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "What's in your kitchen today?",
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 40),
-
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildChoiceCard(
-                      context,
-                      title: "Smart Scan",
-                      subtitle: "Take a photo of your fridge",
-                      icon: Icons.camera_alt_rounded,
-                      color: kPrimaryGreen,
-                      mode: IngredientMode.scan,
-                    ),
-                    _buildChoiceCard(
-                      context,
-                      title: "Manual Entry",
-                      subtitle: "Type in what you have left",
-                      icon: Icons.edit_note_rounded,
-                      color: Colors.blueGrey,
-                      mode: IngredientMode.manual,
-                    ),
-                    _buildChoiceCard(
-                      context,
-                      title: "AI Creative Mode",
-                      subtitle: "Surprise me with AI magic",
-                      icon: Icons.auto_awesome_rounded,
-                      color: kAccentOrange,
-                      mode: IngredientMode.ai,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        body: SafeArea(
+          child: OrientationBuilder(
+            builder: (context, orientation) {
+              if (orientation == Orientation.portrait) {
+                return _buildPortraitLayout(context);
+              } else {
+                return _buildLandscapeLayout(context);
+              }
+            },
           ),
         ),
+    );
+  }
+
+  Widget _buildPortraitLayout(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 10),
+          Text(
+            "Reduce Waste,",
+            style: GoogleFonts.poppins(
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+            ),
+          ),
+          Text(
+            "Cook Deliciously.",
+            style: GoogleFonts.poppins(
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              color: kPrimaryGreen,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "What's in your kitchen today?",
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 40),
+
+          Expanded(child: _buildChoiceList(context)),
+        ],
       ),
+    );
+  }
+
+  Widget _buildLandscapeLayout(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Reduce Waste,",
+                  style: GoogleFonts.poppins(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  "Cook Deliciously.",
+                  style: GoogleFonts.poppins(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: kPrimaryGreen,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "What's in your kitchen today?",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 30),
+
+          Expanded(
+            flex: 3,
+            child: _buildChoiceList(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChoiceList(BuildContext context) {
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      children: [
+        _buildChoiceCard(
+          context,
+          title: "Smart Scan",
+          subtitle: "Take a photo of your fridge",
+          icon: Icons.camera_alt_rounded,
+          color: kPrimaryGreen,
+          mode: IngredientMode.scan,
+        ),
+        _buildChoiceCard(
+          context,
+          title: "Manual Entry",
+          subtitle: "Type in what you have left",
+          icon: Icons.edit_note_rounded,
+          color: Colors.blueGrey,
+          mode: IngredientMode.manual,
+        ),
+        _buildChoiceCard(
+          context,
+          title: "AI Creative Mode",
+          subtitle: "Surprise me with AI magic",
+          icon: Icons.auto_awesome_rounded,
+          color: kAccentOrange,
+          mode: IngredientMode.ai,
+        ),
+      ],
     );
   }
 
