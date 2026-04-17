@@ -21,12 +21,13 @@ class MealDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Obx(() {
-        // Find the latest meal in the controller so UI updates when you change the photo
+        // Sync with controller to show live updates if meal is edited
         final currentMeal = controller.plannedMeals.firstWhere(
           (m) => m.id == meal.id,
           orElse: () => meal,
         );
 
+        // Convert raw strings into clean lists for the UI
         List<String> ingredientList = currentMeal.ingredients.contains('\n')
             ? currentMeal.ingredients.split('\n')
             : currentMeal.ingredients.split(',');
@@ -53,7 +54,6 @@ class MealDetailScreen extends StatelessWidget {
                       ),
                     ),
 
-                    // Gradient overlay so text stays readable
                     Container(
                       decoration: const BoxDecoration(color: Colors.black26),
                     ),
@@ -275,13 +275,200 @@ class MealDetailScreen extends StatelessWidget {
     return _buildFullPlaceholder();
   }
 
-  // --- HELPERS (Banners, Items, Dialogs) ---
+  // --- SHEET  ---
+  void _showEditMealSheet(
+      BuildContext context,
+      PlannerController controller,
+      Meal meal,
+      )
+  {
+    final titleController = TextEditingController(text: meal.title);
+    final kcalController = TextEditingController(text: meal.kcal.toString());
+    final ingredientsController = TextEditingController(text: meal.ingredients);
+    final stepsController = TextEditingController(text: meal.steps);
+    final urlController = TextEditingController(
+      text: meal.imageUrl.startsWith('http') ? meal.imageUrl : '',
+    );
+
+    var selectedType = meal.type.obs;
+    var currentImageUrl = meal.imageUrl.obs;
+
+    Get.bottomSheet(
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // --- HEADER
+              Stack(
+                children: [
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        "Edit Meal",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    child: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Get.back(),
+                    ),
+                  ),
+                ],
+              ),
+
+              // --- LIVE PREVIEW
+              Obx(
+                    () => Container(
+                  height: 180,
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(16),
+                    image: currentImageUrl.value.isNotEmpty
+                        ? DecorationImage(
+                      image: currentImageUrl.value.startsWith('http')
+                          ? NetworkImage(currentImageUrl.value)
+                          : FileImage(File(currentImageUrl.value))
+                      as ImageProvider,
+                      fit: BoxFit.cover,
+                    )
+                        : null,
+                  ),
+                ),
+              ),
+
+              // --- TYPE SELECTOR
+              Obx(
+                    () => Wrap(
+                  spacing: 10,
+                  children: ['Breakfast', 'Lunch', 'Dinner']
+                      .map(
+                        (type) => ChoiceChip(
+                      label: Text(type),
+                      selected: selectedType.value == type,
+                      selectedColor: Color(0xFF00A676),
+                      labelStyle: TextStyle(
+                        color: selectedType.value == type
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                      onSelected: (_) => selectedType.value = type,
+                    ),
+                  )
+                      .toList(),
+                ),
+              ),
+
+              // --- ALL INPUT FIELDS
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: "Title"),
+              ),
+              TextField(
+                controller: kcalController,
+                decoration: const InputDecoration(labelText: "Calories"),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: ingredientsController,
+                decoration: const InputDecoration(labelText: "Ingredients"),
+                maxLines: 2,
+              ),
+              TextField(
+                controller: stepsController,
+                decoration: const InputDecoration(labelText: "Steps"),
+                maxLines: 3,
+              ),
+
+              const SizedBox(height: 15),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(
+                  labelText: "Paste Image URL",
+                  prefixIcon: Icon(Icons.link),
+                ),
+                onChanged: (val) => currentImageUrl.value = val,
+              ),
+
+              const SizedBox(height: 10),
+
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF00A676).withValues(alpha: 0.1),
+                  foregroundColor: Color(0xFF00A676),
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                onPressed: () async {
+                  final picked = await ImagePicker().pickImage(
+                    source: ImageSource.gallery,
+                  );
+                  if (picked != null) {
+                    currentImageUrl.value = picked.path;
+                    urlController.text = "";
+                  }
+                },
+                icon: const Icon(Icons.photo_library),
+                label: const Text("Pick from Gallery"),
+              ),
+
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF00A676),
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                onPressed: () async {
+                  await controller.updateMeal(
+                    meal.copyWith(
+                      title: titleController.text,
+                      type: selectedType.value,
+                      kcal: int.tryParse(kcalController.text) ?? meal.kcal,
+                      ingredients: ingredientsController.text,
+                      steps: stepsController.text,
+                      imageUrl: currentImageUrl.value,
+                    ),
+                  );
+                  Get.back();
+                },
+                child: const Text(
+                  "Save Changes",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   void showGroceryBottomSheet(
     BuildContext context,
     PlannerController controller,
     List<String> ingredients,
-  ) {
+  )
+  {
     // 1. Persistent State Maps
     final Map<String, TextEditingController> textControllers = {
       for (var i in ingredients) i: TextEditingController(text: i),
@@ -417,6 +604,8 @@ class MealDetailScreen extends StatelessWidget {
     );
   }
 
+  // --- HELPER  ---
+  // --- Change Community Story To Receipt Banner
   Widget _buildResolveBanner(
     BuildContext context,
     Meal meal,
@@ -534,189 +723,5 @@ class MealDetailScreen extends StatelessWidget {
         .toList();
   }
 
-  void _showEditMealSheet(
-    BuildContext context,
-    PlannerController controller,
-    Meal meal,
-  ) {
-    final titleController = TextEditingController(text: meal.title);
-    final kcalController = TextEditingController(text: meal.kcal.toString());
-    final ingredientsController = TextEditingController(text: meal.ingredients);
-    final stepsController = TextEditingController(text: meal.steps);
-    final urlController = TextEditingController(
-      text: meal.imageUrl.startsWith('http') ? meal.imageUrl : '',
-    );
 
-    var selectedType = meal.type.obs;
-    var currentImageUrl = meal.imageUrl.obs;
-
-    Get.bottomSheet(
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // --- HEADER
-              Stack(
-                children: [
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Text(
-                        "Edit Meal",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Get.back(),
-                    ),
-                  ),
-                ],
-              ),
-
-              // --- LIVE PREVIEW
-              Obx(
-                () => Container(
-                  height: 180,
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(vertical: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(16),
-                    image: currentImageUrl.value.isNotEmpty
-                        ? DecorationImage(
-                            image: currentImageUrl.value.startsWith('http')
-                                ? NetworkImage(currentImageUrl.value)
-                                : FileImage(File(currentImageUrl.value))
-                                      as ImageProvider,
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                ),
-              ),
-
-              // --- TYPE SELECTOR
-              Obx(
-                () => Wrap(
-                  spacing: 10,
-                  children: ['Breakfast', 'Lunch', 'Dinner']
-                      .map(
-                        (type) => ChoiceChip(
-                          label: Text(type),
-                          selected: selectedType.value == type,
-                          selectedColor: Color(0xFF00A676),
-                          labelStyle: TextStyle(
-                            color: selectedType.value == type
-                                ? Colors.white
-                                : Colors.black,
-                          ),
-                          onSelected: (_) => selectedType.value = type,
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-
-              // --- ALL INPUT FIELDS
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: "Title"),
-              ),
-              TextField(
-                controller: kcalController,
-                decoration: const InputDecoration(labelText: "Calories"),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: ingredientsController,
-                decoration: const InputDecoration(labelText: "Ingredients"),
-                maxLines: 2,
-              ),
-              TextField(
-                controller: stepsController,
-                decoration: const InputDecoration(labelText: "Steps"),
-                maxLines: 3,
-              ),
-
-              const SizedBox(height: 15),
-              TextField(
-                controller: urlController,
-                decoration: const InputDecoration(
-                  labelText: "Paste Image URL",
-                  prefixIcon: Icon(Icons.link),
-                ),
-                onChanged: (val) => currentImageUrl.value = val,
-              ),
-
-              const SizedBox(height: 10),
-
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF00A676).withValues(alpha: 0.1),
-                  foregroundColor: Color(0xFF00A676),
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                onPressed: () async {
-                  final picked = await ImagePicker().pickImage(
-                    source: ImageSource.gallery,
-                  );
-                  if (picked != null) {
-                    currentImageUrl.value = picked.path;
-                    urlController.text = "";
-                  }
-                },
-                icon: const Icon(Icons.photo_library),
-                label: const Text("Pick from Gallery"),
-              ),
-
-              const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF00A676),
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                onPressed: () async {
-                  await controller.updateMeal(
-                    meal.copyWith(
-                      title: titleController.text,
-                      type: selectedType.value,
-                      kcal: int.tryParse(kcalController.text) ?? meal.kcal,
-                      ingredients: ingredientsController.text,
-                      steps: stepsController.text,
-                      imageUrl: currentImageUrl.value,
-                    ),
-                  );
-                  Get.back();
-                },
-                child: const Text(
-                  "Save Changes",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
