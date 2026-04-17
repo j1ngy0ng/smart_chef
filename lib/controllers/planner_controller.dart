@@ -92,7 +92,7 @@ class PlannerController extends GetxController {
     return totals;
   }
 
-  // --- Database Methods ---
+  // --- Database Methods (MEAL) ---
   Future<void> fetchMealsForDate(DateTime date) async {
     try {
       isLoading.value = true;
@@ -143,7 +143,7 @@ class PlannerController extends GetxController {
           recipeId: meal.id.toString(),
           title: meal.title,
           kcal: meal.kcal.toString(),
-          imageUrl: meal.imageUrl, // This carries the new Gallery path or Web URL
+          imageUrl: meal.imageUrl,
           ingredients: meal.ingredients,
           steps: meal.steps,
         );
@@ -151,7 +151,6 @@ class PlannerController extends GetxController {
       }
     } catch (e) {
       debugPrint("Sync Error: $e");
-      // Standard error handling
     }
   }
 
@@ -375,6 +374,7 @@ class PlannerController extends GetxController {
     }
   }
 
+  // --- SAVE MEAL ---
   // Handle the Save Meal object (for the Detail Screen)
   Future<void> toggleCloudSave(Meal meal) async {
     try {
@@ -404,7 +404,7 @@ class PlannerController extends GetxController {
 // Handle the String recipeId (for the Saved Meals Sheet)
   Future<void> removeByRecipeId(String recipeId) async {
     await _supabaseService.removeMealFromCloud(recipeId);
-    fetchSavedMeals(); // Refresh the list
+    fetchSavedMeals();
     Get.snackbar("Removed", "Meal removed from Cloud Planner");
   }
 

@@ -20,7 +20,6 @@ class SmartPlannerScreen extends GetView<PlannerController> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // --- ADD NEW MEAL TO PLANNER OPTION BUTTONS
       floatingActionButton: SpeedDial(
         icon: Icons.add,
         activeIcon: Icons.close,
@@ -105,8 +104,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
     );
   }
 
-  // --- UI HELPER METHODS ---
-
+  // --- PLANNER UI HELPER METHODS ---
   Widget _buildHeader(PlannerController controller) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -185,7 +183,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
   }
 
   // --- ADD OPTION SHEET
-
+  // --- COMMUNITY FAVORITE ---
   void _showAddOptionSheet(BuildContext context, PlannerController controller, PostController postController) {
     controller.searchQuery.value = "";
 
@@ -351,7 +349,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
     );
   }
 
-// --- OFFLINE STATE WIDGET ---
+  // --- OFFLINE STATE WIDGET ---
   Widget _buildOfflineState(BuildContext context, PostController postController) {
     return Center(
       child: Padding(
@@ -372,7 +370,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => postController.fetchPosts(), // Replace with your fetch method
+              onPressed: () => postController.fetchPosts(),
               icon: const Icon(Icons.refresh, size: 18),
               label: const Text("RETRY"),
               style: ElevatedButton.styleFrom(
@@ -387,6 +385,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
     );
   }
 
+  // --- MY SAVED MEAL ---
   void _showSavedMealSheet(BuildContext context, PlannerController controller) {
     controller.fetchSavedMeals();
 
@@ -465,7 +464,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                             ),
                             const SizedBox(width: 12),
 
-                            // 2. TITLE AND DROPDOWN (Now inside Expanded)
+                            // 2. TITLE AND DROPDOWN
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,7 +496,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
                             IconButton(
                               icon: const Icon(Icons.bookmark_remove, color: Colors.redAccent),
                               onPressed: () async {
-                                // NOTE: Do not cast as 'Meal'. Pass the ID string.
+                                // Do not cast as 'Meal'. Pass the ID string.
                                 await controller.removeByRecipeId(meal['recipe_id'].toString());
                                 controller.fetchSavedMeals();
                               },
@@ -516,12 +515,12 @@ class SmartPlannerScreen extends GetView<PlannerController> {
     );
   }
 
-  // --- SMART SETUP SHEET ---
-
+  // --- AI GENERATE MEAL SHEET ---
   void _showSmartSetupSheet(
     BuildContext context,
     PlannerController controller,
-  ) {
+  )
+  {
     var rangeStart = controller.selectedDay.value.obs;
     var rangeEnd = controller.selectedDay.value.obs;
     var selectedTypes = <String>['Breakfast', 'Lunch', 'Dinner'].obs;
@@ -600,10 +599,8 @@ class SmartPlannerScreen extends GetView<PlannerController> {
 
                       checkmarkColor: Colors.white,
 
-                      // --- HERE IS THE COLOR CHANGE ---
                       selectedColor: const Color(0xFF00A676),
 
-                      // Optional: Set a different color when NOT selected (e.g., light grey)
                       backgroundColor: Colors.grey.shade200,
 
                       onSelected: (val) => val
@@ -667,7 +664,6 @@ class SmartPlannerScreen extends GetView<PlannerController> {
   }
 
   // --- MEAL CARD ---
-
   Widget _buildMealCard(Meal meal, PlannerController controller) {
     // Use Obx to make the card listen to updates in the controller
     return Obx(() {
@@ -798,6 +794,7 @@ class SmartPlannerScreen extends GetView<PlannerController> {
     );
   }
 
+  // --- DELETE MEAL ---
   void _showDeleteDialog(Meal meal, PlannerController controller) {
     Get.bottomSheet(
       Container(
