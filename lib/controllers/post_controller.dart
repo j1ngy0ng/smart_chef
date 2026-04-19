@@ -321,13 +321,13 @@ class PostController extends GetxController {
         isLiked.value = false;
         currentLikeCount.value--;
 
-        // SYNC: Remove from profile list
+        // Remove from profile list
         profileController.likedPosts.removeWhere((p) => p.id == postId);
       } else {
         isLiked.value = true;
         currentLikeCount.value++;
 
-        // SYNC: Add to profile list
+        // Add to profile list
         // Find the post object from main list
         final likedPost = posts.firstWhereOrNull((p) => p.id == postId);
         if (likedPost != null) {
@@ -445,7 +445,7 @@ class PostController extends GetxController {
   void onClose() {
     titleController.dispose();
     contentController.dispose();
-    // CRITICAL: Cancel the sensor stream to save battery and prevent memory leaks
+    // Cancel the sensor stream to save battery and prevent memory leaks
     _shakeSubscription?.cancel();
     super.onClose();
   }
