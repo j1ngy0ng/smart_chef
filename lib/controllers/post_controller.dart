@@ -258,10 +258,18 @@ class PostController extends GetxController {
           apiKey: 'AIzaSyB5z8_MWyKlNxItApAAZRrARylVLOZDmhc'
       );
 
+      // formating rules
       final prompt = """
     You are a professional food blogger and chef. 
     Rewrite the following recipe content to be more engaging, appetizing, and well-structured for a social media app called SmartChef.
     Keep the original ingredients and steps accurate, but use a friendly and exciting tone.
+    
+    CRITICAL FORMATTING RULES:
+    - DO NOT use any Markdown formatting (absolutely NO asterisks **, hashes ##, underscores _, or dividers ---).
+    - Output purely plain text.
+    - No asterisks '*' in the text!
+    - Use a simple dash (-) for bullet points and ingredient lists.
+    - Use standard numbering (1., 2., 3.) for the cooking steps.
     
     Original Content: ${contentController.text}
     """;
