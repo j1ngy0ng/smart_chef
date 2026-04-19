@@ -69,6 +69,8 @@ class NutritionController extends GetxController {
     _scheduleMidnightReset();
   }
 
+
+
   // ─── Main Loader ─────────────────────────────────────────────────────────────
   Future<void> loadDashboard() async {
     if (userId.isEmpty) return;
@@ -355,15 +357,23 @@ class NutritionController extends GetxController {
           .select()
           .eq('user_id', userId)
           .gte('recorded_at', startOfDay.toIso8601String())
+          .lt('recorded_at', startOfDay.add(const Duration(days: 1)).toIso8601String())
           .order('recorded_at', ascending: false)
           .limit(1)
           .maybeSingle()
           .timeout(const Duration(seconds: 3));
 
       if (data != null) {
-        healthData.value = DailyHealthData.fromMap(data);
-        waterGlasses.value = healthData.value!.waterIntake;
-        await _localDb.cacheHealthData(healthData.value!);
+        final loaded = DailyHealthData.fromMap(data);
+        // Only use DB steps if pedometer hasn't started yet
+        if (healthData.value == null || healthData.value!.source != 'pedometer') {
+          healthData.value = loaded;
+        } else {
+          // Pedometer already running — only restore water, don't overwrite steps
+          waterGlasses.value = loaded.waterIntake;
+        }
+        waterGlasses.value = loaded.waterIntake;
+        await _localDb.cacheHealthData(loaded);
       } else {
         final cached = await _localDb.getCachedHealthData(userId, today);
         healthData.value = cached ?? DailyHealthData.empty(userId);

@@ -177,7 +177,7 @@ class _AddMealScreenState extends State<AddMealScreen>
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: _C.primary),
               )
-                  : const Icon(Icons.qr_code_scanner_rounded,
+                  : const Icon(Icons.camera_alt_rounded,
                   color: Colors.white, size: 22),
             ),
           )),

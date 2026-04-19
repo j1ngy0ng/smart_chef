@@ -82,7 +82,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
       try {
         final logsData = await _client
             .from('nutrition_logs')
-            .select('user_id, steps, calories_burned, water_intake, source, recorded_at')
+            .select()
             .eq('user_id', _userId)
             .gte('logged_at', DateTime(start.year, start.month, start.day).toIso8601String())
             .lte('logged_at', DateTime(end.year, end.month, end.day, 23, 59, 59).toIso8601String())
@@ -504,14 +504,24 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
           // Legend
           Row(
             children: [
+              const SizedBox(width: 36),
               _legendDot('Intake', _C.primary),
-              const SizedBox(width: 16),
+              const SizedBox(width: 46),
               _legendDot('Burned', _C.burn),
-              const SizedBox(width: 16),
-              _legendDot('Goal', _C.text3, isDashed: true),
+              const SizedBox(width: 46),
+              _legendDot('Exceed', _C.warning),
             ],
           ),
           const SizedBox(height: 14),
+          Row(
+            children: [
+              const SizedBox(width: 56),
+              _legendDot('Intake goal', _C.text3, isDashed: true),
+              const SizedBox(width: 46),
+              _legendDot('Burned goal', _C.steps, isDashed: true),
+            ],
+          ),
+          const SizedBox(height: 24),
           SizedBox(
             height: 160,
             child: AnimatedBuilder(
@@ -524,6 +534,7 @@ class _NutritionAnalyticsScreenState extends State<NutritionAnalyticsScreen>
                   painter: _BarChartPainter(
                     data: _chartData,
                     goal: _ctrl.calorieGoal.value,
+                    stepGoalCalories: _ctrl.stepGoal.value * 0.04,
                     progress: t,
                   ),
                 );
@@ -980,7 +991,7 @@ class _LineChartPainter extends CustomPainter {
     // Goal line (dashed)
     final goalY = yOf(goal);
     final dashPaint = Paint()
-      ..color = _C.warning.withValues(alpha: 0.7)
+      ..color = _C.text3.withValues(alpha: 0.7)
       ..strokeWidth = 1.5;
     double dx = leftPad;
     while (dx < size.width - rightPad) {
@@ -1049,7 +1060,7 @@ class _LineChartPainter extends CustomPainter {
 
       // Dot
       canvas.drawCircle(Offset(x, y), 4,
-          Paint()..color = isOver ? _C.errorRed : _C.primary);
+          Paint()..color = isOver ? _C.warning : _C.primary);
       canvas.drawCircle(Offset(x, y), 2.5,
           Paint()..color = Colors.white);
     }
@@ -1072,18 +1083,18 @@ class _LineChartPainter extends CustomPainter {
 class _BarChartPainter extends CustomPainter {
   final List<_DayData> data;
   final double goal;
+  final double stepGoalCalories;
   final double progress;
 
   _BarChartPainter(
-      {required this.data, required this.goal, required this.progress});
+      {required this.data, required this.goal,
+        required this.stepGoalCalories, required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
 
-    // Show max last 10 entries for readability
-    final displayData =
-    data.length > 10 ? data.sublist(data.length - 10) : data;
+    final displayData = data;
 
     const labelH = 20.0;
     const leftPad = 36.0;
@@ -1091,71 +1102,134 @@ class _BarChartPainter extends CustomPainter {
     final chartW = size.width - leftPad;
 
     final maxVal = math.max(
+      math.max(
         displayData.map((d) => math.max(d.calories, d.burned)).reduce(math.max),
-        goal * 1.1);
+        goal * 1.1,
+      ),
+      stepGoalCalories * 1.1, // make sure step goal line is always visible
+    );
 
     final groupW = chartW / displayData.length;
-    const barPad = 3.0;
-    final barW = (groupW - barPad * 3) / 2;
+    const barPad = 2.0;
+    final barW = ((groupW - barPad * 3) / 2).clamp(2.0, 20.0);
 
-    // Goal line
+    // Calorie goal line — grey dashed
     final goalY = chartH - (goal / maxVal) * chartH * progress;
-    final dashPaint = Paint()
+    final calDashPaint = Paint()
       ..color = _C.text3.withValues(alpha: 0.5)
       ..strokeWidth = 1;
     double dx = leftPad;
     while (dx < size.width) {
-      canvas.drawLine(Offset(dx, goalY), Offset(dx + 5, goalY), dashPaint);
+      canvas.drawLine(Offset(dx, goalY), Offset(dx + 5, goalY), calDashPaint);
       dx += 9;
     }
+
+    // Step goal burned line — steps color dashed
+    final stepGoalY = chartH - (stepGoalCalories / maxVal) * chartH * progress;
+    final stepDashPaint = Paint()
+      ..color = _C.steps.withValues(alpha: 0.7)
+      ..strokeWidth = 1.5;
+    double sx = leftPad;
+    while (sx < size.width) {
+      canvas.drawLine(
+          Offset(sx, stepGoalY), Offset(sx + 6, stepGoalY), stepDashPaint);
+      sx += 11;
+    }
+
+    // Step goal label on the right edge
+    final stepLabelPainter = TextPainter(
+      text: TextSpan(
+        text: '${stepGoalCalories.toInt()}kcal',
+        style: TextStyle(
+          fontSize: 8,
+          color: _C.steps.withValues(alpha: 0.8),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    stepLabelPainter.paint(
+      canvas,
+      Offset(size.width - stepLabelPainter.width - 2, stepGoalY - 11),
+    );
+
+    // Calorie goal label on the right edge
+    final calLabelPainter = TextPainter(
+      text: TextSpan(
+        text: '${goal.toInt()}kcal',
+        style: TextStyle(
+          fontSize: 8,
+          color: _C.text3.withValues(alpha: 0.8),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    calLabelPainter.paint(
+      canvas,
+      Offset(size.width - calLabelPainter.width - 2, goalY - 11),
+    );
 
     for (int i = 0; i < displayData.length; i++) {
       final d = displayData[i];
       final groupX = leftPad + i * groupW;
 
-      // Intake bar
-      final intakeH = (d.calories / maxVal) * chartH * progress;
       final isOver = d.calories > goal;
-      final intakeRect = RRect.fromRectAndCorners(
-        Rect.fromLTWH(groupX + barPad, chartH - intakeH, barW, intakeH),
-        topLeft: const Radius.circular(4),
-        topRight: const Radius.circular(4),
-      );
+      final intakeH = (d.calories / maxVal) * chartH * progress;
+      final goalH = (goal / maxVal) * chartH * progress;
 
-      // Always draw the green fill
-      canvas.drawRRect(intakeRect,
-          Paint()..color = _C.primary.withValues(alpha: 0.85));
-
-      // If over goal, draw red border on top instead of filling red
       if (isOver) {
-        canvas.drawRRect(
-          intakeRect,
-          Paint()
-            ..color = _C.errorRed
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.0,
+        // Green portion up to goal
+        final greenRect = RRect.fromRectAndCorners(
+          Rect.fromLTWH(groupX + barPad, chartH - goalH, barW, goalH),
+          bottomLeft: Radius.zero,
+          bottomRight: Radius.zero,
         );
-        // Small red cap at top to clearly mark overflow
-        final capRect = RRect.fromRectAndCorners(
-          Rect.fromLTWH(groupX + barPad, chartH - intakeH, barW, 5),
-          topLeft: const Radius.circular(4),
-          topRight: const Radius.circular(4),
+        canvas.drawRRect(greenRect,
+            Paint()..color = _C.primary.withValues(alpha: 0.85));
+
+        // Red overflow above goal
+        final overflowH = intakeH - goalH;
+        final redRect = RRect.fromRectAndCorners(
+          Rect.fromLTWH(groupX + barPad, chartH - intakeH, barW, overflowH),
+          topLeft: const Radius.circular(3),
+          topRight: const Radius.circular(3),
         );
-        canvas.drawRRect(capRect, Paint()..color = _C.errorRed);
+        canvas.drawRRect(redRect,
+            Paint()..color = _C.warning.withValues(alpha: 0.9));
+      } else {
+        final intakeRect = RRect.fromRectAndCorners(
+          Rect.fromLTWH(groupX + barPad, chartH - intakeH, barW, intakeH),
+          topLeft: const Radius.circular(3),
+          topRight: const Radius.circular(3),
+        );
+        canvas.drawRRect(intakeRect,
+            Paint()..color = _C.primary.withValues(alpha: 0.85));
       }
 
-      // Burned bar
+      // Burned bar — highlight green if it meets the step goal
       final burnedH = (d.burned / maxVal) * chartH * progress;
+      final metStepGoal = d.burned >= stepGoalCalories;
       final burnedRect = RRect.fromRectAndCorners(
         Rect.fromLTWH(
             groupX + barPad * 2 + barW, chartH - burnedH, barW, burnedH),
-        topLeft: const Radius.circular(4),
-        topRight: const Radius.circular(4),
+        topLeft: const Radius.circular(3),
+        topRight: const Radius.circular(3),
       );
-      canvas.drawRRect(burnedRect, Paint()..color = _C.burn.withValues(alpha: 0.75));
+      canvas.drawRRect(
+        burnedRect,
+        Paint()
+          ..color = metStepGoal
+              ? _C.steps.withValues(alpha: 0.9)   // brighter when goal met
+              : _C.burn.withValues(alpha: 0.75),  // normal orange otherwise
+      );
 
       // X label
-      final show = displayData.length <= 7 || i % 2 == 0;
+      final interval = displayData.length <= 7
+          ? 1
+          : displayData.length <= 14
+          ? 2
+          : 5;
+      final show = i % interval == 0 || i == displayData.length - 1;
       if (show) {
         final tp = TextPainter(
           text: TextSpan(
@@ -1182,7 +1256,10 @@ class _BarChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BarChartPainter old) => old.progress != progress;
+  bool shouldRepaint(_BarChartPainter old) =>
+      old.progress != progress ||
+          old.data != data ||
+          old.stepGoalCalories != stepGoalCalories;
 }
 
 // PIE CHART PAINTER

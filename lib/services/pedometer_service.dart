@@ -73,6 +73,16 @@ class PedometerService {
     // Check if we have a baseline for today in SQLite
     final savedBaseline = await db.getPedometerBaseline(todayKey);
 
+    if (savedBaseline != null && savedBaseline > totalSinceReboot) {
+      // Baseline is corrupt (e.g. from a device reboot resetting the counter)
+      // Reset it to current value
+      await db.savePedometerBaseline(todayKey, totalSinceReboot);
+      _stepCountAtMidnight = totalSinceReboot;
+      _todaySteps = 0;
+      onStepsUpdated?.call(0);
+      return;
+    }
+
     if (savedBaseline == null) {
       // First reading of the day — save as baseline
       _stepCountAtMidnight = totalSinceReboot;
