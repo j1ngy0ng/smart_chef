@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:smart_chef/config/app_config.dart';
 
 class SupabaseService {
   final SupabaseClient _client = Supabase.instance.client;
@@ -11,8 +12,10 @@ class SupabaseService {
   User? get currentUser => _client.auth.currentUser;
 
   Future<AuthResponse> googleSignIn() async {
-    const webClientId =
-        '222115080204-3t6fvq4d5ahth5eua6les249d5vomhfa.apps.googleusercontent.com';
+    final webClientId = AppConfig.require(
+      'GOOGLE_WEB_CLIENT_ID',
+      AppConfig.googleWebClientId,
+    );
 
     final GoogleSignIn googleSignIn = GoogleSignIn(serverClientId: webClientId);
 

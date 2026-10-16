@@ -1,0 +1,8 @@
+# Copy values into your local flutter command and never commit real secrets.
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+GOOGLE_WEB_CLIENT_ID=
+GEMINI_API_KEY=
+GEMINI_NUTRITION_API_KEY=
+PIXABAY_API_KEY=
+SPOONACULAR_API_KEY=

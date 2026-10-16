@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:intl/intl.dart';
+import 'package:smart_chef/config/app_config.dart';
 import '../models/grocery_item.dart';
 import '../models/meal_model.dart';
 import '../models/post_model.dart';
@@ -179,7 +180,7 @@ class PlannerController extends GetxController {
 
       final model = GenerativeModel(
         model: 'gemini-2.5-flash',
-        apiKey: 'AIzaSyCeHUyp3gMl9cBndMQvYWrIxlZGHLrCcHg',
+        apiKey: AppConfig.requireGeminiApiKey('Planner recipe resolve'),
       );
 
       final prompt =
@@ -238,7 +239,7 @@ class PlannerController extends GetxController {
 
       final model = GenerativeModel(
         model: 'gemini-2.5-flash',
-        apiKey: 'AIzaSyCeHUyp3gMl9cBndMQvYWrIxlZGHLrCcHg',
+        apiKey: AppConfig.requireGeminiApiKey('Planner smart plan generation'),
       );
 
       int daysCount = end.difference(start).inDays + 1;

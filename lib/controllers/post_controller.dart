@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:smart_chef/config/app_config.dart';
 import 'package:smart_chef/controllers/profile_controller.dart';
 import '../models/post_model.dart';
 import '../screens/blog/post_detail_screen.dart';
@@ -15,11 +16,6 @@ import 'package:sensors_plus/sensors_plus.dart';
 class PostController extends GetxController {
   final SupabaseService _service = SupabaseService();
   final LocalDbService _localDb = LocalDbService(); // 1. Added Local Database
-
-  final _model = GenerativeModel(
-    model: 'gemini-2.5-flash',
-    apiKey: 'AIzaSyB5z8_MWyKlNxItApAAZRrARylVLOZDmhc',
-  );
 
   // Text Controllers
   final titleController = TextEditingController();
@@ -165,7 +161,7 @@ class PostController extends GetxController {
       isLoading.value = true;
 
       // 1. AI Review & Enhancement Phase
-      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: 'AIzaSyB5z8_MWyKlNxItApAAZRrARylVLOZDmhc');
+      final model = _createGeminiModel();
 
       final prompt = """
     You are the SmartChef AI Moderator. 
@@ -254,8 +250,8 @@ class PostController extends GetxController {
 
       // Initialize Gemini
       final model = GenerativeModel(
-          model: 'gemini-2.5-flash',
-          apiKey: 'AIzaSyB5z8_MWyKlNxItApAAZRrARylVLOZDmhc'
+        model: 'gemini-2.5-flash',
+        apiKey: AppConfig.requireGeminiApiKey('Post AI enhancement'),
       );
 
       // formating rules
@@ -448,5 +444,12 @@ class PostController extends GetxController {
     // Cancel the sensor stream to save battery and prevent memory leaks
     _shakeSubscription?.cancel();
     super.onClose();
+  }
+
+  GenerativeModel _createGeminiModel() {
+    return GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: AppConfig.requireGeminiApiKey('Post AI moderation'),
+    );
   }
 }

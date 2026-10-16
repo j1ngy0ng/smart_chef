@@ -2,15 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:smart_chef/config/app_config.dart';
 
 class GeminiService {
-  static const String apiKey = "AIzaSyAmp9T4GoH0h9RU2rJ-BU_qwuRxnr8r_8I";
-  static const String pixabayApiKey = "54874799-571b5c264e06fb47d926b6bb3";
-
-  static const String _nutritionApiKey = 'AIzaSyC95VmA7tfXrMtqgvomfSYPFZD9jOUrxkI';
-
   //Detect ingredients from image
   static Future<List<String>> detectIngredients(File image) async {
+    final apiKey = AppConfig.requireGeminiApiKey('Ingredient detection');
     final bytes = await image.readAsBytes();
     final base64Image = base64Encode(bytes);
 
@@ -84,6 +81,7 @@ tomato, egg, onion
 
   //AI Fix Ingredients
   static Future<List<String>> fixIngredients(List<String> ingredients) async {
+    final apiKey = AppConfig.requireGeminiApiKey('Ingredient cleanup');
     final url = Uri.parse(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey",
     );
@@ -144,6 +142,7 @@ Return ONLY a comma separated list in lowercase.
 
   // Generate Recipes
   static Future<List<Map<String, String>>> generateRecipes(List<String> ingredients, {int targetCount = 6}) async {
+    final apiKey = AppConfig.requireGeminiApiKey('Recipe generation');
     final url = Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey");
 
     //kcal and duration
@@ -221,6 +220,10 @@ Return ONLY a comma separated list in lowercase.
 
   //Fetch Image
   static Future<String> fetchRecipeImagePixabay(String query) async {
+    final pixabayApiKey = AppConfig.require(
+      'PIXABAY_API_KEY',
+      AppConfig.pixabayApiKey,
+    );
     try {
       final url = Uri.parse(
         "https://pixabay.com/api/?key=$pixabayApiKey&q=${Uri.encodeComponent(query)}&image_type=photo&per_page=3",
@@ -252,11 +255,12 @@ Return ONLY a comma separated list in lowercase.
 
   static Future<Map<String, dynamic>?> analyzeFoodImage(Uint8List imageBytes) async {
     try {
+      final nutritionApiKey = AppConfig.requireGeminiNutritionApiKey();
       final base64Image = base64Encode(imageBytes);
 
       final response = await http.post(
         Uri.parse(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$_nutritionApiKey',
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$nutritionApiKey',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -331,8 +335,9 @@ Return ONLY a comma separated list in lowercase.
 
   static Future<Map<String, dynamic>?> searchFoodNutrition(String foodName) async {
     try {
+      final nutritionApiKey = AppConfig.requireGeminiNutritionApiKey();
       final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$_nutritionApiKey',
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$nutritionApiKey',
       );
 
       final prompt = '''
