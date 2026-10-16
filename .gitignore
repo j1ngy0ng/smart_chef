@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets and signing files
+/android/app/agconnect-services.json
+/android/app/debug.keystore
+/android/key.properties

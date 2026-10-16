@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:smart_chef/config/app_config.dart';
 import '../models/waste_recipe_model.dart';
 
 class RecipeService {
-  static const String apiKey = "fc36808696c7405e89a45aad686b2cdc";
-
   /// Fetch recipes by ingredient names
   static Future<List<Recipe>> fetchRecipesByIngredients(List<String> ingredients) async {
     if (ingredients.isEmpty) return [];
+    final apiKey = AppConfig.require(
+      'SPOONACULAR_API_KEY',
+      AppConfig.spoonacularApiKey,
+    );
 
     final ingredientString = ingredients.join(",");
     final url = Uri.parse(

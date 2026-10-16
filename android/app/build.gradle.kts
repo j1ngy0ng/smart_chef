@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -16,13 +19,24 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
+    val keystoreProperties = Properties()
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    val hasReleaseSigningConfig = keystorePropertiesFile.exists()
+    if (hasReleaseSigningConfig) {
+        keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    }
+    val isReleaseBuildRequested = gradle.startParameter.taskNames.any {
+        it.contains("Release", ignoreCase = true)
+    }
+
     signingConfigs {
-        getByName("debug") {
-            // This assumes you placed 'debug.keystore' inside 'android/app/'
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+        if (hasReleaseSigningConfig) {
+            create("release") {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
         }
     }
 
@@ -45,11 +59,14 @@ android {
 
     buildTypes {
         getByName("release") {
-            // Now both release and debug use the same shared key
-            signingConfig = signingConfigs.getByName("debug")
-        }
-        getByName("debug") {
-            signingConfig = signingConfigs.getByName("debug")
+            if (hasReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            } else if (isReleaseBuildRequested) {
+                throw GradleException(
+                    "Missing android/key.properties for release signing. " +
+                    "Create it locally and provide storeFile, storePassword, keyAlias, keyPassword."
+                )
+            }
         }
     }
 }

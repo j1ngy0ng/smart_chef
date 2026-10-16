@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
+import 'package:smart_chef/config/app_config.dart';
 import 'package:smart_chef/screens/blog/blog_feed_screen.dart';
 import 'package:smart_chef/screens/dashboard_screen.dart';
 import 'package:smart_chef/services/local_db_service.dart';
@@ -13,8 +14,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://onpgamhynuwavemaskqy.supabase.co',
-    anonKey: 'sb_publishable_EDvi6-MQTfeM9NWQvVZDXg_kIhcDpCu',
+    url: AppConfig.require('SUPABASE_URL', AppConfig.supabaseUrl),
+    anonKey: AppConfig.require('SUPABASE_ANON_KEY', AppConfig.supabaseAnonKey),
     authOptions: const FlutterAuthClientOptions(
       autoRefreshToken: true,
     ),
